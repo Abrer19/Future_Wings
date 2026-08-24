@@ -1,0 +1,14 @@
+C:\Users\Abrar\FutureWings\bin\Debug\net10.0\FutureWings.exe
+C:\Users\Abrar\FutureWings\bin\Debug\net10.0\FutureWings.deps.json
+C:\Users\Abrar\FutureWings\bin\Debug\net10.0\FutureWings.runtimeconfig.json
+C:\Users\Abrar\FutureWings\bin\Debug\net10.0\FutureWings.dll
+C:\Users\Abrar\FutureWings\bin\Debug\net10.0\FutureWings.pdb
+C:\Users\Abrar\FutureWings\obj\Debug\net10.0\FutureWings.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Abrar\FutureWings\obj\Debug\net10.0\FutureWings.AssemblyInfoInputs.cache
+C:\Users\Abrar\FutureWings\obj\Debug\net10.0\FutureWings.AssemblyInfo.cs
+C:\Users\Abrar\FutureWings\obj\Debug\net10.0\FutureWings.csproj.CoreCompileInputs.cache
+C:\Users\Abrar\FutureWings\obj\Debug\net10.0\FutureWings.dll
+C:\Users\Abrar\FutureWings\obj\Debug\net10.0\refint\FutureWings.dll
+C:\Users\Abrar\FutureWings\obj\Debug\net10.0\FutureWings.pdb
+C:\Users\Abrar\FutureWings\obj\Debug\net10.0\FutureWings.genruntimeconfig.cache
+C:\Users\Abrar\FutureWings\obj\Debug\net10.0\ref\FutureWings.dll
