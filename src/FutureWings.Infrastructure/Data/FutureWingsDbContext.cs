@@ -112,6 +112,10 @@ public sealed class FutureWingsDbContext(DbContextOptions<FutureWingsDbContext> 
         modelBuilder.Entity<VisaOutcome>().HasKey(outcome => outcome.Id);
         modelBuilder.Entity<Rating>().HasKey(rating => rating.Id);
         modelBuilder.Entity<Notification>().HasKey(notification => notification.Id);
-        modelBuilder.Entity<Payment>().HasKey(payment => payment.Id);
+        modelBuilder.Entity<Payment>(entity =>
+        {
+            entity.HasKey(payment => payment.Id);
+            entity.Property(payment => payment.Amount).HasPrecision(18, 2);
+        });
     }
 }
