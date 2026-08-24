@@ -1,121 +1,63 @@
 import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import Admin from './pages/Admin.jsx'
+import Applications from './pages/Applications.jsx'
+import Community from './pages/Community.jsx'
+import Dashboard from './pages/Dashboard.jsx'
+import Discovery from './pages/Discovery.jsx'
+import Login from './pages/Login.jsx'
+import Recommendations from './pages/Recommendations.jsx'
+import Register from './pages/Register.jsx'
+import Scholarships from './pages/Scholarships.jsx'
+import VisaCheck from './pages/VisaCheck.jsx'
+
+const pages = {
+  Dashboard,
+  Discovery,
+  Recommendations,
+  Applications,
+  'Visa Check': VisaCheck,
+  Scholarships,
+  Community,
+  Admin,
+  Login,
+  Register,
+}
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [activePage, setActivePage] = useState('Dashboard')
+  const ActivePage = pages[activePage]
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div className="min-h-screen lg:grid lg:grid-cols-[240px_1fr]">
+      <aside className="border-b border-gray-200 bg-white px-4 py-5 lg:min-h-screen lg:border-b-0 lg:border-r">
+        <div className="mb-6 flex items-center gap-3 px-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-emerald-600 text-sm font-bold text-white">FW</div>
+          <div>
+            <p className="font-semibold text-gray-950">FutureWings</p>
+            <p className="text-xs text-gray-500">Student workspace</p>
+          </div>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+        <nav className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-1" aria-label="Main navigation">
+          {Object.keys(pages).map((page) => (
+            <button
+              className={`rounded-md px-3 py-2 text-left text-sm font-medium transition ${
+                activePage === page
+                  ? 'bg-emerald-50 text-emerald-800'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-950'
+              }`}
+              key={page}
+              onClick={() => setActivePage(page)}
+              type="button"
+            >
+              {page}
+            </button>
+          ))}
+        </nav>
+      </aside>
+      <main className="p-5 sm:p-8 lg:p-10">
+        <ActivePage />
+      </main>
+    </div>
   )
 }
 
