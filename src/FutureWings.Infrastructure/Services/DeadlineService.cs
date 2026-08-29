@@ -8,14 +8,22 @@ namespace FutureWings.Infrastructure.Services;
 
 public sealed class DeadlineService(FutureWingsDbContext context) : IDeadlineService
 {
-    public async Task<IReadOnlyList<DeadlineDto>> GetAllAsync(int userId) =>
-        await context.Deadlines
+    public async Task<IReadOnlyList<DeadlineDto>> GetAllAsync(int userId)
+    {
+        if (!await context.Deadlines.AnyAsync(deadline => deadline.UserId == userId))
+        {
+            context.Deadlines.AddRange(DefaultDeadlineFactory.CreateForUser(userId, DateTimeOffset.UtcNow));
+            await context.SaveChangesAsync();
+        }
+
+        return await context.Deadlines
             .AsNoTracking()
             .Where(deadline => deadline.UserId == userId)
             .OrderBy(deadline => deadline.CompletedAt.HasValue)
             .ThenBy(deadline => deadline.DueAt)
             .Select(deadline => Map(deadline))
             .ToListAsync();
+    }
 
     public async Task<DeadlineDto> CreateAsync(int userId, DeadlineCreateDto request)
     {

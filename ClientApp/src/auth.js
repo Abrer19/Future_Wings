@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5002/api'
+const API_URL = import.meta.env.VITE_API_URL ?? '/api'
 const STORAGE_KEY = 'futurewings.auth'
 
 export function loadSession() {
@@ -24,7 +24,7 @@ export function clearSession() {
 }
 
 export async function authenticate(endpoint, credentials) {
-  const response = await fetch(`${API_URL}/auth/${endpoint}`, {
+  const response = await fetchApi(`${API_URL}/auth/${endpoint}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(credentials),
@@ -42,7 +42,7 @@ export async function apiRequest(path, { token, ...options } = {}) {
   if (options.body) headers['Content-Type'] = 'application/json'
   if (token) headers.Authorization = `Bearer ${token}`
 
-  const response = await fetch(`${API_URL}${path}`, { ...options, headers })
+  const response = await fetchApi(`${API_URL}${path}`, { ...options, headers })
   if (response.status === 204) return null
 
   const body = await response.json().catch(() => ({}))
@@ -51,4 +51,12 @@ export async function apiRequest(path, { token, ...options } = {}) {
     throw new Error(body.message || validationMessage || 'The request could not be completed.')
   }
   return body
+}
+
+async function fetchApi(url, options) {
+  try {
+    return await fetch(url, options)
+  } catch {
+    throw new Error('Unable to connect to FutureWings. Please make sure the backend is running and try again.')
+  }
 }
