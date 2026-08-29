@@ -36,3 +36,19 @@ export async function authenticate(endpoint, credentials) {
   }
   return body
 }
+
+export async function apiRequest(path, { token, ...options } = {}) {
+  const headers = { ...options.headers }
+  if (options.body) headers['Content-Type'] = 'application/json'
+  if (token) headers.Authorization = `Bearer ${token}`
+
+  const response = await fetch(`${API_URL}${path}`, { ...options, headers })
+  if (response.status === 204) return null
+
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    const validationMessage = body.errors ? Object.values(body.errors).flat().join(' ') : null
+    throw new Error(body.message || validationMessage || 'The request could not be completed.')
+  }
+  return body
+}
