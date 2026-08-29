@@ -29,6 +29,9 @@ public sealed class FutureWingsDbContext(DbContextOptions<FutureWingsDbContext> 
         modelBuilder.Entity<User>(entity =>
         {
             entity.HasKey(user => user.Id);
+            entity.Property(user => user.Email).HasMaxLength(320);
+            entity.HasIndex(user => user.Email).IsUnique();
+            entity.Property(user => user.PasswordHash).HasMaxLength(100);
 
             entity.HasOne(user => user.Profile)
                 .WithOne(profile => profile.User)
