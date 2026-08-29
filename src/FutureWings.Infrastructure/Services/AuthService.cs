@@ -69,6 +69,7 @@ public sealed class AuthService(
             Email = user.Email,
             FirstName = user.Profile?.FirstName ?? string.Empty,
             LastName = user.Profile?.LastName ?? string.Empty,
+            Role = user.Role,
             Token = jwtTokenService.GenerateToken(user, secret, issuer, audience, TokenLifetime),
             ExpiresAt = expiresAt
         };

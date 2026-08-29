@@ -33,6 +33,7 @@ public sealed class FutureWingsDbContext(DbContextOptions<FutureWingsDbContext> 
             entity.Property(user => user.Email).HasMaxLength(320);
             entity.HasIndex(user => user.Email).IsUnique();
             entity.Property(user => user.PasswordHash).HasMaxLength(100);
+            entity.Property(user => user.Role).HasMaxLength(20).HasDefaultValue("Student");
 
             entity.HasOne(user => user.Profile)
                 .WithOne(profile => profile.User)
