@@ -12,4 +12,5 @@ public class User
     public ICollection<Rating> Ratings { get; set; } = [];
     public ICollection<Notification> Notifications { get; set; } = [];
     public ICollection<Payment> Payments { get; set; } = [];
+    public ICollection<Deadline> Deadlines { get; set; } = [];
 }

@@ -21,6 +21,7 @@ public sealed class FutureWingsDbContext(DbContextOptions<FutureWingsDbContext> 
     public DbSet<Rating> Ratings => Set<Rating>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<Deadline> Deadlines => Set<Deadline>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -56,6 +57,10 @@ public sealed class FutureWingsDbContext(DbContextOptions<FutureWingsDbContext> 
             entity.HasMany(user => user.Payments)
                 .WithOne(payment => payment.User)
                 .HasForeignKey(payment => payment.UserId);
+
+            entity.HasMany(user => user.Deadlines)
+                .WithOne(deadline => deadline.User)
+                .HasForeignKey(deadline => deadline.UserId);
         });
 
         modelBuilder.Entity<UserProfile>().HasKey(profile => profile.Id);
@@ -119,6 +124,15 @@ public sealed class FutureWingsDbContext(DbContextOptions<FutureWingsDbContext> 
         {
             entity.HasKey(payment => payment.Id);
             entity.Property(payment => payment.Amount).HasPrecision(18, 2);
+        });
+
+        modelBuilder.Entity<Deadline>(entity =>
+        {
+            entity.HasKey(deadline => deadline.Id);
+            entity.Property(deadline => deadline.Title).HasMaxLength(200);
+            entity.Property(deadline => deadline.Category).HasMaxLength(50);
+            entity.Property(deadline => deadline.Notes).HasMaxLength(1000);
+            entity.HasIndex(deadline => new { deadline.UserId, deadline.DueAt });
         });
     }
 }
