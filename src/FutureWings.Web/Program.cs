@@ -32,6 +32,7 @@ builder.Services.AddScoped<IScholarshipService, ScholarshipService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IDeadlineService, DeadlineService>();
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<PasswordHasherService>();
 builder.Services.AddScoped<StripePaymentService>();
