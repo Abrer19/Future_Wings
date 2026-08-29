@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { clearSession, loadSession, saveSession } from './auth.js'
 import Admin from './pages/Admin.jsx'
 import Applications from './pages/Applications.jsx'
 import Community from './pages/Community.jsx'
@@ -24,8 +25,26 @@ const pages = {
 }
 
 function App() {
-  const [activePage, setActivePage] = useState('Dashboard')
+  const [session, setSession] = useState(loadSession)
+  const [activePage, setActivePage] = useState(session ? 'Dashboard' : 'Login')
   const ActivePage = pages[activePage]
+
+  const handleAuthenticated = (nextSession) => {
+    saveSession(nextSession)
+    setSession(nextSession)
+    setActivePage('Dashboard')
+  }
+
+  const handleLogout = () => {
+    clearSession()
+    setSession(null)
+    setActivePage('Login')
+  }
+
+  if (!session) {
+    const AuthPage = activePage === 'Register' ? Register : Login
+    return <AuthPage onAuthenticated={handleAuthenticated} onNavigate={() => setActivePage(activePage === 'Register' ? 'Login' : 'Register')} />
+  }
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[240px_1fr]">
@@ -38,7 +57,7 @@ function App() {
           </div>
         </div>
         <nav className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-1" aria-label="Main navigation">
-          {Object.keys(pages).map((page) => (
+          {Object.keys(pages).filter((page) => page !== 'Login' && page !== 'Register').map((page) => (
             <button
               className={`rounded-md px-3 py-2 text-left text-sm font-medium transition ${
                 activePage === page
@@ -53,9 +72,14 @@ function App() {
             </button>
           ))}
         </nav>
+        <div className="mt-8 border-t border-gray-200 px-2 pt-4">
+          <p className="truncate text-sm font-medium text-gray-900">{session.firstName} {session.lastName}</p>
+          <p className="truncate text-xs text-gray-500">{session.email}</p>
+          <button className="mt-3 text-sm font-medium text-red-600 hover:text-red-700" onClick={handleLogout} type="button">Log out</button>
+        </div>
       </aside>
       <main className="p-5 sm:p-8 lg:p-10">
-        <ActivePage />
+        <ActivePage session={session} />
       </main>
     </div>
   )

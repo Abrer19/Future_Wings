@@ -21,7 +21,7 @@ builder.Services.AddDbContext<FutureWingsDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
-builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IAuthService, FutureWings.Infrastructure.Services.AuthService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddScoped<IRecommendationService, RecommendationService>();
 builder.Services.AddScoped<IDiscoveryService, DiscoveryService>();
@@ -60,7 +60,7 @@ builder.Services
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
-        policy.WithOrigins("http://localhost:5173")
+        policy.WithOrigins("http://localhost:5173", "http://127.0.0.1:5173")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials());
