@@ -23,10 +23,12 @@ public sealed class AuthService(
             throw new InvalidOperationException("An account with this email already exists.");
         }
 
+        var isFirstUser = !await context.Users.AnyAsync();
         var user = new User
         {
             Email = email,
             PasswordHash = passwordHasher.HashPassword(request.Password),
+            Role = isFirstUser ? "Admin" : "Student",
             Profile = new UserProfile
             {
                 FirstName = request.FirstName.Trim(),
@@ -69,6 +71,7 @@ public sealed class AuthService(
             Email = user.Email,
             FirstName = user.Profile?.FirstName ?? string.Empty,
             LastName = user.Profile?.LastName ?? string.Empty,
+            Role = user.Role,
             Token = jwtTokenService.GenerateToken(user, secret, issuer, audience, TokenLifetime),
             ExpiresAt = expiresAt
         };

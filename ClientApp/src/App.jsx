@@ -57,7 +57,9 @@ function App() {
           </div>
         </div>
         <nav className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-1" aria-label="Main navigation">
-          {Object.keys(pages).filter((page) => page !== 'Login' && page !== 'Register').map((page) => (
+          {Object.keys(pages).filter((page) =>
+            page !== 'Login' && page !== 'Register' && (page !== 'Admin' || session.role === 'Admin')
+          ).map((page) => (
             <button
               className={`rounded-md px-3 py-2 text-left text-sm font-medium transition ${
                 activePage === page
@@ -75,6 +77,7 @@ function App() {
         <div className="mt-8 border-t border-gray-200 px-2 pt-4">
           <p className="truncate text-sm font-medium text-gray-900">{session.firstName} {session.lastName}</p>
           <p className="truncate text-xs text-gray-500">{session.email}</p>
+          <span className="mt-2 inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">{session.role ?? 'Student'}</span>
           <button className="mt-3 text-sm font-medium text-red-600 hover:text-red-700" onClick={handleLogout} type="button">Log out</button>
         </div>
       </aside>

@@ -1,12 +1,12 @@
-namespace FutureWings.Application.DTOs.Auth;
+namespace FutureWings.Application.DTOs.Admin;
 
-public class AuthResponseDto
+public class AdminUserDto
 {
-    public int UserId { get; set; }
+    public int Id { get; set; }
     public string Email { get; set; } = string.Empty;
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
     public string Role { get; set; } = "Student";
-    public string Token { get; set; } = string.Empty;
-    public DateTimeOffset ExpiresAt { get; set; }
+    public int ApplicationCount { get; set; }
+    public int DeadlineCount { get; set; }
 }

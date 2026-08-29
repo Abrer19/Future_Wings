@@ -41,6 +41,7 @@ public class AuthController(IAuthService authService) : ControllerBase
     public IActionResult Me() => Ok(new
     {
         userId = User.FindFirstValue(ClaimTypes.NameIdentifier),
-        email = User.FindFirstValue(ClaimTypes.Email)
+        email = User.FindFirstValue(ClaimTypes.Email),
+        role = User.FindFirstValue(ClaimTypes.Role)
     });
 }
