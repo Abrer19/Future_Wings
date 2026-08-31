@@ -110,7 +110,7 @@ export default function Discovery({ session }) {
       <section aria-labelledby="destinations-title">
         <div className="mb-4 flex items-end justify-between gap-4">
           <div><p className="text-sm font-semibold text-primary-600">Popular destinations</p><h2 className="mt-1 text-2xl font-bold text-secondary-950" id="destinations-title">Explore by country</h2></div>
-          <button className="hidden text-sm font-semibold text-primary-600 hover:text-primary-800 sm:block" onClick={() => setCountry('')} type="button">View all destinations →</button>
+          <button className="hidden min-h-11 items-center rounded-lg px-2 text-sm font-semibold text-primary-600 hover:bg-primary-50 hover:text-primary-800 sm:inline-flex" onClick={() => setCountry('')} type="button">View all destinations →</button>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {result.featuredCountries.map((item) => (
