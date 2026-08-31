@@ -48,18 +48,24 @@ export default function DeadlineRow({ deadline, now, pending, justAdded, onDelet
         overdue ? 'border-danger-500 bg-danger-50/40' : 'border-transparent'
       } ${pending ? 'opacity-60' : ''} ${entered ? 'translate-y-0 opacity-100' : '-translate-y-1 opacity-0'}`}
     >
+      {/* The visual control stays 20px; the padding (cancelled by the negative margin,
+          so layout is unchanged) grows the touch target to 44px. */}
       <button
         aria-label={`${isCompleted ? 'Reopen' : 'Complete'} “${title}”`}
-        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition disabled:cursor-not-allowed ${FOCUS} ${
-          isCompleted
-            ? 'border-success-500 bg-success-500 text-white'
-            : 'border-secondary-300 hover:border-primary-500'
-        }`}
+        className={`-m-3 mt-0.5 flex shrink-0 self-start rounded-full p-3 transition disabled:cursor-not-allowed ${FOCUS}`}
         disabled={pending}
         onClick={() => onToggle(deadline)}
         type="button"
       >
-        {pending ? <SpinnerIcon className="h-3 w-3 text-secondary-500" /> : isCompleted ? <CheckIcon /> : null}
+        <span
+          className={`flex h-5 w-5 items-center justify-center rounded-full border-2 transition ${
+            isCompleted
+              ? 'border-success-500 bg-success-500 text-white'
+              : 'border-secondary-300'
+          }`}
+        >
+          {pending ? <SpinnerIcon className="h-3 w-3 text-secondary-500" /> : isCompleted ? <CheckIcon /> : null}
+        </span>
       </button>
 
       <div className="min-w-0 flex-1">
@@ -98,7 +104,7 @@ export default function DeadlineRow({ deadline, now, pending, justAdded, onDelet
           <span className="mr-1 text-xs font-medium text-secondary-500">Delete?</span>
           <button
             aria-label={`Confirm deletion of “${title}”`}
-            className={`inline-flex items-center rounded-lg bg-danger-500 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-danger-600 disabled:opacity-50 ${FOCUS}`}
+            className={`inline-flex min-h-11 items-center rounded-lg bg-danger-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-danger-600 disabled:opacity-50 sm:min-h-8 ${FOCUS}`}
             disabled={pending}
             onClick={() => onDelete(deadline)}
             type="button"

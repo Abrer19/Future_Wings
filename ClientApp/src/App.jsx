@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { clearSession, loadSession, saveSession } from './auth.js'
 import Admin from './pages/Admin.jsx'
 import Applications from './pages/Applications.jsx'
@@ -28,7 +28,23 @@ const pages = {
 function App() {
   const [session, setSession] = useState(loadSession)
   const [activePage, setActivePage] = useState(session ? 'Dashboard' : 'Home')
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuButtonRef = useRef(null)
   const ActivePage = pages[activePage]
+
+  // Below lg the nav is a collapsible drawer; Escape closes it and returns focus to
+  // the control that opened it so keyboard users are never stranded inside it.
+  useEffect(() => {
+    if (!menuOpen) return undefined
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false)
+        menuButtonRef.current?.focus()
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [menuOpen])
 
   const handleAuthenticated = (nextSession) => {
     saveSession(nextSession)
@@ -40,6 +56,12 @@ function App() {
     clearSession()
     setSession(null)
     setActivePage('Home')
+    setMenuOpen(false)
+  }
+
+  const goTo = (page) => {
+    setActivePage(page)
+    setMenuOpen(false)
   }
 
   if (!session) {
@@ -62,42 +84,72 @@ function App() {
     return <AuthPage onAuthenticated={handleAuthenticated} onNavigate={() => setActivePage(activePage === 'Register' ? 'Login' : 'Register')} />
   }
 
+  const navPages = Object.keys(pages).filter((page) =>
+    page !== 'Login' && page !== 'Register' && (page !== 'Admin' || session.role === 'Admin')
+  )
+
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[240px_1fr]">
-      <aside className="border-b border-secondary-200 bg-white px-4 py-5 lg:min-h-screen lg:border-b-0 lg:border-r">
-        <div className="mb-6 flex items-center gap-3 px-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary-500 text-sm font-bold text-white">FW</div>
-          <div>
-            <p className="font-semibold text-secondary-950">FutureWings</p>
-            <p className="text-xs text-secondary-500">Student workspace</p>
+      {/* Below lg this is a sticky top bar that collapses to ~60px; from lg it is the
+          full-height sidebar. Previously the expanded nav consumed ~379px of vertical
+          space on a phone before any page content appeared. */}
+      <aside className="sticky top-0 z-30 border-b border-secondary-200 bg-white px-4 py-3 lg:static lg:min-h-screen lg:border-b-0 lg:border-r lg:py-5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3 px-2">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary-500 text-sm font-bold text-white">FW</div>
+            <div className="min-w-0">
+              <p className="truncate font-semibold text-secondary-950">FutureWings</p>
+              <p className="truncate text-xs text-secondary-500">Student workspace</p>
+            </div>
           </div>
+          <button
+            aria-controls="workspace-nav"
+            aria-expanded={menuOpen}
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-secondary-600 transition hover:bg-secondary-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 lg:hidden"
+            onClick={() => setMenuOpen((open) => !open)}
+            ref={menuButtonRef}
+            type="button"
+          >
+            <svg aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.75" viewBox="0 0 24 24">
+              {menuOpen ? <path d="M6 6l12 12M18 6 6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+            </svg>
+          </button>
         </div>
-        <nav className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-1" aria-label="Main navigation">
-          {Object.keys(pages).filter((page) =>
-            page !== 'Login' && page !== 'Register' && (page !== 'Admin' || session.role === 'Admin')
-          ).map((page) => (
+
+        <div className={`${menuOpen ? 'block' : 'hidden'} lg:block`} id="workspace-nav">
+          <nav className="mt-4 grid grid-cols-2 gap-1 sm:grid-cols-3 lg:mt-6 lg:grid-cols-1" aria-label="Main navigation">
+            {navPages.map((page) => (
+              <button
+                aria-current={activePage === page ? 'page' : undefined}
+                className={`flex min-h-11 items-center rounded-md px-3 py-2 text-left text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
+                  activePage === page
+                    ? 'bg-primary-50 text-primary-700'
+                    : 'text-secondary-600 hover:bg-secondary-100 hover:text-secondary-950'
+                }`}
+                key={page}
+                onClick={() => goTo(page)}
+                type="button"
+              >
+                {page}
+              </button>
+            ))}
+          </nav>
+          <div className="mt-6 border-t border-secondary-200 px-2 pt-4 lg:mt-8">
+            <p className="truncate text-sm font-medium text-secondary-900">{session.firstName} {session.lastName}</p>
+            <p className="truncate text-xs text-secondary-500">{session.email}</p>
+            <span className="mt-2 inline-flex rounded-full bg-secondary-100 px-2 py-0.5 text-xs font-medium text-secondary-600">{session.role ?? 'Student'}</span>
             <button
-              className={`rounded-md px-3 py-2 text-left text-sm font-medium transition ${
-                activePage === page
-                  ? 'bg-primary-50 text-primary-700'
-                  : 'text-secondary-600 hover:bg-secondary-100 hover:text-secondary-950'
-              }`}
-              key={page}
-              onClick={() => setActivePage(page)}
+              className="mt-3 flex min-h-11 w-full items-center rounded-md px-1 text-sm font-medium text-danger-600 transition hover:bg-danger-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+              onClick={handleLogout}
               type="button"
             >
-              {page}
+              Log out
             </button>
-          ))}
-        </nav>
-        <div className="mt-8 border-t border-secondary-200 px-2 pt-4">
-          <p className="truncate text-sm font-medium text-secondary-900">{session.firstName} {session.lastName}</p>
-          <p className="truncate text-xs text-secondary-500">{session.email}</p>
-          <span className="mt-2 inline-flex rounded-full bg-secondary-100 px-2 py-0.5 text-xs font-medium text-secondary-600">{session.role ?? 'Student'}</span>
-          <button className="mt-3 text-sm font-medium text-red-600 hover:text-red-700" onClick={handleLogout} type="button">Log out</button>
+          </div>
         </div>
       </aside>
-      <main className="p-5 sm:p-8 lg:p-10">
+      <main className="p-4 sm:p-6 lg:p-10">
         <ActivePage session={session} />
       </main>
     </div>
