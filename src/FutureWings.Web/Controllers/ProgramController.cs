@@ -9,5 +9,5 @@ public class ProgramController(IDiscoveryService discoveryService) : ControllerB
 {
     [HttpGet]
     public async Task<IActionResult> Search([FromQuery] string query = "") =>
-        Ok(await discoveryService.SearchUniversitiesAsync(query));
+        Ok((await discoveryService.SearchAsync(0, query, null, null)).Programs);
 }
