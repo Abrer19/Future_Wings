@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react'
 import { discoveryCountries, discoveryPrograms } from '../data/discoveryPrograms.js'
 
 function ArrowIcon() {
@@ -5,6 +6,17 @@ function ArrowIcon() {
 }
 
 export default function Discovery() {
+  const [query, setQuery] = useState('')
+  const filteredPrograms = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase()
+    if (!normalizedQuery) return discoveryPrograms
+
+    return discoveryPrograms.filter((item) =>
+      [item.university, item.program, item.country, item.city, ...item.tags]
+        .some((value) => value.toLowerCase().includes(normalizedQuery))
+    )
+  }, [query])
+
   return (
     <div className="mx-auto max-w-7xl space-y-8">
       <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-950 via-emerald-800 to-teal-700 px-6 py-10 text-white shadow-lg sm:px-10">
@@ -12,6 +24,19 @@ export default function Discovery() {
           <span className="inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-50">Your study journey starts here</span>
           <h1 className="mt-5 text-3xl font-bold tracking-tight sm:text-5xl">Find a program that feels made for you.</h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-emerald-50 sm:text-lg">Compare universities, understand costs, and discover destinations that match your ambitions.</p>
+          <label className="mt-7 flex max-w-2xl items-center gap-3 rounded-xl bg-white p-2 pl-4 shadow-xl shadow-emerald-950/20" htmlFor="program-search">
+            <span aria-hidden="true" className="text-gray-400">⌕</span>
+            <span className="sr-only">Search programs</span>
+            <input
+              className="min-w-0 flex-1 bg-transparent py-2 text-sm text-gray-900 outline-none placeholder:text-gray-400 sm:text-base"
+              id="program-search"
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search by program, university, or destination"
+              type="search"
+              value={query}
+            />
+            <span className="hidden rounded-lg bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white sm:block">Search</span>
+          </label>
         </div>
       </section>
 
@@ -44,7 +69,7 @@ export default function Discovery() {
           <h2 className="mt-1 text-2xl font-bold text-gray-950" id="programs-title">Featured programs</h2>
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
-          {discoveryPrograms.map((item) => (
+          {filteredPrograms.map((item) => (
             <article className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm" key={item.id}>
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -65,6 +90,13 @@ export default function Discovery() {
             </article>
           ))}
         </div>
+        {filteredPrograms.length === 0 && (
+          <div className="rounded-2xl border border-dashed border-gray-300 bg-white px-6 py-12 text-center">
+            <p className="font-semibold text-gray-900">No programs found</p>
+            <p className="mt-1 text-sm text-gray-500">Try a different program, university, or destination.</p>
+            <button className="mt-4 text-sm font-semibold text-emerald-700" onClick={() => setQuery('')} type="button">Clear search</button>
+          </div>
+        )}
       </section>
     </div>
   )
