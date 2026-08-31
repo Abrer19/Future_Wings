@@ -7,15 +7,18 @@ function ArrowIcon() {
 
 export default function Discovery() {
   const [query, setQuery] = useState('')
+  const [country, setCountry] = useState('All countries')
+  const [level, setLevel] = useState('All levels')
   const filteredPrograms = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
-    if (!normalizedQuery) return discoveryPrograms
-
-    return discoveryPrograms.filter((item) =>
-      [item.university, item.program, item.country, item.city, ...item.tags]
+    return discoveryPrograms.filter((item) => {
+      const matchesQuery = !normalizedQuery || [item.university, item.program, item.country, item.city, ...item.tags]
         .some((value) => value.toLowerCase().includes(normalizedQuery))
-    )
-  }, [query])
+      const matchesCountry = country === 'All countries' || item.country === country
+      const matchesLevel = level === 'All levels' || item.level === level
+      return matchesQuery && matchesCountry && matchesLevel
+    })
+  }, [country, level, query])
 
   return (
     <div className="mx-auto max-w-7xl space-y-8">
@@ -64,9 +67,25 @@ export default function Discovery() {
       </section>
 
       <section aria-labelledby="programs-title">
-        <div className="mb-4">
-          <p className="text-sm font-semibold text-emerald-700">Curated for students</p>
-          <h2 className="mt-1 text-2xl font-bold text-gray-950" id="programs-title">Featured programs</h2>
+        <div className="mb-4 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+          <div>
+            <p className="text-sm font-semibold text-emerald-700">Curated for students</p>
+            <h2 className="mt-1 text-2xl font-bold text-gray-950" id="programs-title">Featured programs</h2>
+            <p className="mt-1 text-sm text-gray-500">Showing {filteredPrograms.length} of {discoveryPrograms.length} programs</p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <label className="sr-only" htmlFor="country-filter">Filter by country</label>
+            <select className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 outline-none focus:border-emerald-500" id="country-filter" onChange={(event) => setCountry(event.target.value)} value={country}>
+              <option>All countries</option>
+              {[...new Set(discoveryPrograms.map((item) => item.country))].map((name) => <option key={name}>{name}</option>)}
+            </select>
+            <label className="sr-only" htmlFor="level-filter">Filter by study level</label>
+            <select className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 outline-none focus:border-emerald-500" id="level-filter" onChange={(event) => setLevel(event.target.value)} value={level}>
+              <option>All levels</option>
+              <option>Bachelor's</option>
+              <option>Master's</option>
+            </select>
+          </div>
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
           {filteredPrograms.map((item) => (
@@ -94,7 +113,7 @@ export default function Discovery() {
           <div className="rounded-2xl border border-dashed border-gray-300 bg-white px-6 py-12 text-center">
             <p className="font-semibold text-gray-900">No programs found</p>
             <p className="mt-1 text-sm text-gray-500">Try a different program, university, or destination.</p>
-            <button className="mt-4 text-sm font-semibold text-emerald-700" onClick={() => setQuery('')} type="button">Clear search</button>
+            <button className="mt-4 text-sm font-semibold text-emerald-700" onClick={() => { setQuery(''); setCountry('All countries'); setLevel('All levels') }} type="button">Clear all filters</button>
           </div>
         )}
       </section>
