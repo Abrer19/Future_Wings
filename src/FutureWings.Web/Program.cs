@@ -101,6 +101,7 @@ using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<FutureWingsDbContext>();
     await context.Database.MigrateAsync();
+    await ApplicationStateSeeder.SeedAsync(context);
     await DiscoverySeeder.SeedAsync(context);
 }
 

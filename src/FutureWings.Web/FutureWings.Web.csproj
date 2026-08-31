@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
     <ProjectReference Include="..\FutureWings.Application\FutureWings.Application.csproj" />
@@ -20,6 +20,7 @@
     <RollForward>Major</RollForward>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>fccefd96-a1ea-4931-bdbb-791de731cb1a</UserSecretsId>
   </PropertyGroup>
 
 </Project>
