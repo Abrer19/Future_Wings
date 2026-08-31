@@ -56,7 +56,8 @@ export async function apiRequest(path, { token, ...options } = {}) {
 async function fetchApi(url, options) {
   try {
     return await fetch(url, options)
-  } catch {
+  } catch (error) {
+    if (error.name === 'AbortError') throw error
     throw new Error('Unable to connect to FutureWings. Please make sure the backend is running and try again.')
   }
 }
