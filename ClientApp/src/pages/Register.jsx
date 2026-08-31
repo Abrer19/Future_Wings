@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { authenticate } from '../auth.js'
-import { AuthLayout, ErrorMessage, Field, SubmitButton } from './Login.jsx'
+import AuthLayout from '../components/auth/AuthLayout.jsx'
+import { ErrorMessage, Field, SubmitButton } from '../components/auth/FormControls.jsx'
 
 export default function Register({ onAuthenticated, onNavigate }) {
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '', confirmPassword: '' })
