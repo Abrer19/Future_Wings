@@ -8,9 +8,5 @@ namespace FutureWings.Web.Controllers;
 public class CountryController(IDiscoveryService discoveryService) : ControllerBase
 {
     [HttpGet]
-    public IActionResult GetAll()
-    {
-        _ = discoveryService;
-        return Ok(new[] { new { Id = 1, Name = "Placeholder Country" } });
-    }
+    public async Task<IActionResult> GetAll() => Ok(await discoveryService.GetCountriesAsync());
 }
