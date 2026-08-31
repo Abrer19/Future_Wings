@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BTN_QUIET, FOCUS } from './styles.js'
+import { BTN_QUIET, FOCUS } from '../ui/styles.js'
 import { AlertIcon, CheckIcon, SpinnerIcon, TrashIcon } from './icons.jsx'
 
 const categoryTone = {

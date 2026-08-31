@@ -1,14 +1,11 @@
 import { SHADOW_FLOAT } from './styles.js'
-import { CheckIcon } from './icons.jsx'
 
 /**
- * Success confirmation for the four mutations.
+ * Success confirmation used across pages.
  *
- * The wrapper is always mounted and always `aria-live="polite"`, which is what makes
- * list changes audible to screen reader users — a live region added at the same moment
- * its content appears is unreliably announced.
- *
- * Keep the region in the DOM; toggle only its contents.
+ * The wrapper is always mounted and always `aria-live="polite"` — a live region added
+ * at the same moment its content appears is unreliably announced. Toggle only the
+ * contents.
  */
 export default function Toast({ message }) {
   return (
@@ -22,7 +19,9 @@ export default function Toast({ message }) {
           className={`pointer-events-auto flex items-center gap-2.5 rounded-2xl border border-secondary-200/70 bg-white py-3 pl-3 pr-4 ${SHADOW_FLOAT}`}
         >
           <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-success-500 text-white">
-            <CheckIcon />
+            <svg aria-hidden="true" className="h-3 w-3" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24">
+              <path d="m5 12.5 4.5 4.5L19 7" />
+            </svg>
           </span>
           <p className="text-sm font-medium text-secondary-950">{message}</p>
         </div>
