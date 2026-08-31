@@ -22,6 +22,7 @@ public sealed class FutureWingsDbContext(DbContextOptions<FutureWingsDbContext> 
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Deadline> Deadlines => Set<Deadline>();
+    public DbSet<SavedProgram> SavedPrograms => Set<SavedProgram>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -69,6 +70,10 @@ public sealed class FutureWingsDbContext(DbContextOptions<FutureWingsDbContext> 
         modelBuilder.Entity<Country>(entity =>
         {
             entity.HasKey(country => country.Id);
+            entity.Property(country => country.Name).HasMaxLength(100);
+            entity.Property(country => country.Code).HasMaxLength(2);
+            entity.Property(country => country.Description).HasMaxLength(250);
+            entity.HasIndex(country => country.Code).IsUnique();
 
             entity.HasMany(country => country.Universities)
                 .WithOne(university => university.Country)
@@ -82,6 +87,8 @@ public sealed class FutureWingsDbContext(DbContextOptions<FutureWingsDbContext> 
         modelBuilder.Entity<University>(entity =>
         {
             entity.HasKey(university => university.Id);
+            entity.Property(university => university.Name).HasMaxLength(200);
+            entity.Property(university => university.City).HasMaxLength(100);
 
             entity.HasMany(university => university.Programs)
                 .WithOne(program => program.University)
@@ -95,10 +102,28 @@ public sealed class FutureWingsDbContext(DbContextOptions<FutureWingsDbContext> 
         modelBuilder.Entity<AcademicProgram>(entity =>
         {
             entity.HasKey(program => program.Id);
+            entity.Property(program => program.Name).HasMaxLength(200);
+            entity.Property(program => program.Level).HasMaxLength(50);
+            entity.Property(program => program.AnnualTuitionUsd).HasPrecision(12, 2);
+            entity.Property(program => program.Tags).HasMaxLength(500);
 
             entity.HasMany(program => program.Applications)
                 .WithOne(application => application.Program)
                 .HasForeignKey(application => application.ProgramId);
+        });
+
+        modelBuilder.Entity<SavedProgram>(entity =>
+        {
+            entity.HasKey(saved => new { saved.UserId, saved.ProgramId });
+            entity.HasOne(saved => saved.User)
+                .WithMany(user => user.SavedPrograms)
+                .HasForeignKey(saved => saved.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(saved => saved.Program)
+                .WithMany(program => program.SavedByUsers)
+                .HasForeignKey(saved => saved.ProgramId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(saved => saved.ProgramId);
         });
 
         modelBuilder.Entity<Scholarship>().HasKey(scholarship => scholarship.Id);
