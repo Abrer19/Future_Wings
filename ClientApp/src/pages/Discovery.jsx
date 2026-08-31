@@ -9,6 +9,7 @@ export default function Discovery() {
   const [query, setQuery] = useState('')
   const [country, setCountry] = useState('All countries')
   const [level, setLevel] = useState('All levels')
+  const [savedPrograms, setSavedPrograms] = useState(() => new Set())
   const filteredPrograms = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
     return discoveryPrograms.filter((item) => {
@@ -19,6 +20,15 @@ export default function Discovery() {
       return matchesQuery && matchesCountry && matchesLevel
     })
   }, [country, level, query])
+
+  const toggleSaved = (programId) => {
+    setSavedPrograms((current) => {
+      const next = new Set(current)
+      if (next.has(programId)) next.delete(programId)
+      else next.add(programId)
+      return next
+    })
+  }
 
   return (
     <div className="mx-auto max-w-7xl space-y-8">
@@ -96,7 +106,17 @@ export default function Discovery() {
                   <h3 className="mt-2 text-lg font-bold text-gray-950">{item.program}</h3>
                   <p className="mt-1 text-sm text-gray-600">{item.university}</p>
                 </div>
-                <span className="shrink-0 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">{item.match}% match</span>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">{item.match}% match</span>
+                  <button
+                    aria-label={`${savedPrograms.has(item.id) ? 'Remove' : 'Add'} ${item.program} ${savedPrograms.has(item.id) ? 'from' : 'to'} shortlist`}
+                    className={`flex h-8 w-8 items-center justify-center rounded-full border text-sm transition ${savedPrograms.has(item.id) ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-gray-200 text-gray-400 hover:border-emerald-300 hover:text-emerald-700'}`}
+                    onClick={() => toggleSaved(item.id)}
+                    type="button"
+                  >
+                    {savedPrograms.has(item.id) ? '♥' : '♡'}
+                  </button>
+                </div>
               </div>
               <div className="mt-5 flex flex-wrap gap-2">
                 {item.tags.map((tag) => <span className="rounded-md bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600" key={tag}>{tag}</span>)}
@@ -117,6 +137,14 @@ export default function Discovery() {
           </div>
         )}
       </section>
+
+      <aside className="flex flex-col gap-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-5 sm:flex-row sm:items-center sm:justify-between" aria-live="polite">
+        <div>
+          <p className="font-bold text-emerald-950">Your discovery shortlist</p>
+          <p className="mt-1 text-sm text-emerald-800">{savedPrograms.size === 0 ? 'Save programs to compare your best options.' : `${savedPrograms.size} program${savedPrograms.size === 1 ? '' : 's'} saved for comparison.`}</p>
+        </div>
+        <button className="rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50" disabled={savedPrograms.size === 0} type="button">Compare saved programs</button>
+      </aside>
     </div>
   )
 }
