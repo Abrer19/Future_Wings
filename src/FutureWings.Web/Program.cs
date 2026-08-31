@@ -23,7 +23,7 @@ builder.Services.AddDbContext<FutureWingsDbContext>(options =>
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped<IAuthService, FutureWings.Infrastructure.Services.AuthService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
-builder.Services.AddScoped<IRecommendationService, RecommendationService>();
+builder.Services.AddScoped<IRecommendationService, FutureWings.Infrastructure.Services.RecommendationService>();
 builder.Services.AddScoped<IDiscoveryService, FutureWings.Infrastructure.Services.DiscoveryService>();
 builder.Services.AddScoped<IApplicationService, ApplicationService>();
 builder.Services.AddScoped<IDocumentService, DocumentService>();
