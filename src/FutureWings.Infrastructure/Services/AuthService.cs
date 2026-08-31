@@ -38,7 +38,24 @@ public sealed class AuthService(
 
         context.Users.Add(user);
         await context.SaveChangesAsync();
+
+        await SeedOnboardingDeadlinesAsync(user);
+
         return CreateResponse(user);
+    }
+
+    /// <summary>
+    /// Creates the onboarding deadlines for a brand new account, exactly once.
+    /// The guard is the persisted flag, not the current row count, so a user who
+    /// deletes every deadline is never re-seeded.
+    /// </summary>
+    private async Task SeedOnboardingDeadlinesAsync(User user)
+    {
+        if (user.HasSeededDeadlines) return;
+
+        context.Deadlines.AddRange(DefaultDeadlineFactory.CreateForUser(user.Id, DateTimeOffset.UtcNow));
+        user.HasSeededDeadlines = true;
+        await context.SaveChangesAsync();
     }
 
     public async Task<AuthResponseDto> LoginAsync(LoginDto request)

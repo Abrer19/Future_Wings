@@ -7,6 +7,13 @@ public class User
     public string PasswordHash { get; set; } = string.Empty;
     public string Role { get; set; } = "Student";
 
+    /// <summary>
+    /// True once the onboarding deadlines have been created for this account.
+    /// Seeding is keyed off this flag rather than off "does the user currently have
+    /// zero deadlines", so deleting every deadline never re-triggers it.
+    /// </summary>
+    public bool HasSeededDeadlines { get; set; }
+
     public UserProfile? Profile { get; set; }
     public ICollection<Application> Applications { get; set; } = [];
     public ICollection<Document> Documents { get; set; } = [];
