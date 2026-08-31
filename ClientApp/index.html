@@ -4,6 +4,15 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- index.css declares font-family: Inter; this is what actually loads it.
+         The id matches the guard in src/components/home/useInterFont.js so that
+         hook becomes a no-op here and never injects a duplicate. -->
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      id="futurewings-inter-font"
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    />
     <title>clientapp</title>
   </head>
   <body>

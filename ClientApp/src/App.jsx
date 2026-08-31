@@ -5,6 +5,7 @@ import Applications from './pages/Applications.jsx'
 import Community from './pages/Community.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Discovery from './pages/Discovery.jsx'
+import Home from './pages/Home.jsx'
 import Login from './pages/Login.jsx'
 import Recommendations from './pages/Recommendations.jsx'
 import Register from './pages/Register.jsx'
@@ -26,7 +27,7 @@ const pages = {
 
 function App() {
   const [session, setSession] = useState(loadSession)
-  const [activePage, setActivePage] = useState(session ? 'Dashboard' : 'Login')
+  const [activePage, setActivePage] = useState(session ? 'Dashboard' : 'Home')
   const ActivePage = pages[activePage]
 
   const handleAuthenticated = (nextSession) => {
@@ -38,22 +39,37 @@ function App() {
   const handleLogout = () => {
     clearSession()
     setSession(null)
-    setActivePage('Login')
+    setActivePage('Home')
   }
 
   if (!session) {
+    // Signed-out visitors land on the public homepage. Login/Register are reached
+    // from its header, so 'Home' is kept out of the `pages` object above to stop it
+    // appearing in the signed-in sidebar nav.
+    if (activePage !== 'Login' && activePage !== 'Register') {
+      return (
+        <Home
+          onExploreCountries={() => setActivePage('Register')}
+          onGetRecommendations={() => setActivePage('Register')}
+          onSignIn={() => setActivePage('Login')}
+          onSignUp={() => setActivePage('Register')}
+          onViewDestination={() => setActivePage('Register')}
+        />
+      )
+    }
+
     const AuthPage = activePage === 'Register' ? Register : Login
     return <AuthPage onAuthenticated={handleAuthenticated} onNavigate={() => setActivePage(activePage === 'Register' ? 'Login' : 'Register')} />
   }
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[240px_1fr]">
-      <aside className="border-b border-gray-200 bg-white px-4 py-5 lg:min-h-screen lg:border-b-0 lg:border-r">
+      <aside className="border-b border-secondary-200 bg-white px-4 py-5 lg:min-h-screen lg:border-b-0 lg:border-r">
         <div className="mb-6 flex items-center gap-3 px-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-emerald-600 text-sm font-bold text-white">FW</div>
+          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary-500 text-sm font-bold text-white">FW</div>
           <div>
-            <p className="font-semibold text-gray-950">FutureWings</p>
-            <p className="text-xs text-gray-500">Student workspace</p>
+            <p className="font-semibold text-secondary-950">FutureWings</p>
+            <p className="text-xs text-secondary-500">Student workspace</p>
           </div>
         </div>
         <nav className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-1" aria-label="Main navigation">
@@ -63,8 +79,8 @@ function App() {
             <button
               className={`rounded-md px-3 py-2 text-left text-sm font-medium transition ${
                 activePage === page
-                  ? 'bg-emerald-50 text-emerald-800'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-950'
+                  ? 'bg-primary-50 text-primary-700'
+                  : 'text-secondary-600 hover:bg-secondary-100 hover:text-secondary-950'
               }`}
               key={page}
               onClick={() => setActivePage(page)}
@@ -74,10 +90,10 @@ function App() {
             </button>
           ))}
         </nav>
-        <div className="mt-8 border-t border-gray-200 px-2 pt-4">
-          <p className="truncate text-sm font-medium text-gray-900">{session.firstName} {session.lastName}</p>
-          <p className="truncate text-xs text-gray-500">{session.email}</p>
-          <span className="mt-2 inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">{session.role ?? 'Student'}</span>
+        <div className="mt-8 border-t border-secondary-200 px-2 pt-4">
+          <p className="truncate text-sm font-medium text-secondary-900">{session.firstName} {session.lastName}</p>
+          <p className="truncate text-xs text-secondary-500">{session.email}</p>
+          <span className="mt-2 inline-flex rounded-full bg-secondary-100 px-2 py-0.5 text-xs font-medium text-secondary-600">{session.role ?? 'Student'}</span>
           <button className="mt-3 text-sm font-medium text-red-600 hover:text-red-700" onClick={handleLogout} type="button">Log out</button>
         </div>
       </aside>

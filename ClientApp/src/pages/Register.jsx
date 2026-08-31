@@ -44,7 +44,7 @@ export default function Register({ onAuthenticated, onNavigate }) {
         <Field label="Confirm password" minLength={8} name="confirmPassword" type="password" value={form.confirmPassword} onChange={update('confirmPassword')} />
         <SubmitButton loading={loading}>Create account</SubmitButton>
       </form>
-      <p className="mt-6 text-center text-sm text-gray-600">Already have an account?{' '}<button className="font-semibold text-emerald-700 hover:text-emerald-800" onClick={onNavigate} type="button">Sign in</button></p>
+      <p className="mt-6 text-center text-sm text-secondary-600">Already have an account?{' '}<button className="font-semibold text-primary-600 hover:text-primary-700" onClick={onNavigate} type="button">Sign in</button></p>
     </AuthLayout>
   )
 }
