@@ -173,7 +173,7 @@ export default function Dashboard({ session }) {
               {filters.map((option) => (
                 <button
                   aria-pressed={filter === option}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${FOCUS} ${
+                  className={`min-h-9 rounded-lg px-3.5 py-2 text-xs font-semibold transition sm:py-1.5 ${FOCUS} ${
                     filter === option
                       ? 'bg-white text-secondary-950 shadow-[0_1px_2px_rgba(27,36,50,0.10)]'
                       : 'text-secondary-500 hover:text-secondary-800'
