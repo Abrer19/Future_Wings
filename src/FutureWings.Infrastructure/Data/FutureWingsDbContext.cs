@@ -65,7 +65,16 @@ public sealed class FutureWingsDbContext(DbContextOptions<FutureWingsDbContext> 
                 .HasForeignKey(deadline => deadline.UserId);
         });
 
-        modelBuilder.Entity<UserProfile>().HasKey(profile => profile.Id);
+        modelBuilder.Entity<UserProfile>(entity =>
+        {
+            entity.HasKey(profile => profile.Id);
+            entity.Property(profile => profile.FirstName).HasMaxLength(100);
+            entity.Property(profile => profile.LastName).HasMaxLength(100);
+            entity.Property(profile => profile.Major).HasMaxLength(100);
+            entity.Property(profile => profile.DegreeLevel).HasMaxLength(50);
+            entity.Property(profile => profile.Cgpa).HasPrecision(3, 2);
+            entity.Property(profile => profile.BudgetUsd).HasPrecision(12, 2);
+        });
 
         modelBuilder.Entity<Country>(entity =>
         {

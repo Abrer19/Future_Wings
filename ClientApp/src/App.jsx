@@ -7,14 +7,18 @@ import Dashboard from './pages/Dashboard.jsx'
 import Discovery from './pages/Discovery.jsx'
 import Home from './pages/Home.jsx'
 import Login from './pages/Login.jsx'
+import Profile from './pages/Profile.jsx'
 import Recommendations from './pages/Recommendations.jsx'
 import Register from './pages/Register.jsx'
+import Roadmap from './pages/Roadmap.jsx'
 import Scholarships from './pages/Scholarships.jsx'
 import VisaCheck from './pages/VisaCheck.jsx'
 
 const pages = {
   Dashboard,
+  Roadmap,
   Discovery,
+  Profile,
   Recommendations,
   Applications,
   'Visa Check': VisaCheck,
@@ -150,7 +154,7 @@ function App() {
         </div>
       </aside>
       <main className="p-4 sm:p-6 lg:p-10">
-        <ActivePage session={session} />
+        <ActivePage onNavigate={goTo} session={session} />
       </main>
     </div>
   )

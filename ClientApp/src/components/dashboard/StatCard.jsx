@@ -1,4 +1,4 @@
-import { CARD } from './styles.js'
+import { CARD } from '../ui/styles.js'
 import { AlertIcon, CheckCircleIcon, ClockIcon } from './icons.jsx'
 
 // Full literal class strings — Tailwind cannot see interpolated arbitrary values.

@@ -1,4 +1,4 @@
-import { BTN_PRIMARY } from './styles.js'
+import { BTN_PRIMARY } from '../ui/styles.js'
 import { CheckCircleIcon, InboxIcon, PlusIcon } from './icons.jsx'
 
 const copy = {
