@@ -1,7 +1,22 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { apiRequest } from '../auth.js'
+import AddDeadlineForm from '../components/dashboard/AddDeadlineForm.jsx'
+import DeadlineRow from '../components/dashboard/DeadlineRow.jsx'
+import DeadlineSkeleton from '../components/dashboard/DeadlineSkeleton.jsx'
+import EmptyState from '../components/dashboard/EmptyState.jsx'
+import Toast from '../components/dashboard/Toast.jsx'
+import { CARD, FOCUS } from '../components/dashboard/styles.js'
+import StatCard from '../components/dashboard/StatCard.jsx'
+import { CloseIcon } from '../components/dashboard/icons.jsx'
 
 const emptyForm = { title: '', category: 'Application', dueAt: '', notes: '' }
+const filters = ['Active', 'Overdue', 'Completed']
+
+/** "now" in the local format a datetime-local input expects (no timezone shift). */
+function toLocalInputValue(date) {
+  const pad = (value) => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
 
 export default function Dashboard({ session }) {
   const [deadlines, setDeadlines] = useState([])
@@ -11,6 +26,15 @@ export default function Dashboard({ session }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [now, setNow] = useState(Date.now)
+
+  // Per-row in-flight guard, mirroring Discovery.jsx's `savingIds`. Without it a
+  // double-click sends two DELETEs and the second 404 surfaces as a false error.
+  const [pendingIds, setPendingIds] = useState(() => new Set())
+  const [toast, setToast] = useState('')
+  const [justAddedId, setJustAddedId] = useState(null)
+  const titleRef = useRef(null)
+
+  const minDueAt = useMemo(() => toLocalInputValue(new Date()), [])
 
   useEffect(() => {
     apiRequest('/deadlines', { token: session.token })
@@ -23,6 +47,20 @@ export default function Dashboard({ session }) {
     const timer = window.setInterval(() => setNow(Date.now()), 60_000)
     return () => window.clearInterval(timer)
   }, [])
+
+  useEffect(() => {
+    if (!toast) return undefined
+    const timer = window.setTimeout(() => setToast(''), 2800)
+    return () => window.clearTimeout(timer)
+  }, [toast])
+
+  const markPending = (id, active) =>
+    setPendingIds((current) => {
+      const next = new Set(current)
+      if (active) next.add(id)
+      else next.delete(id)
+      return next
+    })
 
   const visibleDeadlines = useMemo(() => deadlines.filter((deadline) => {
     if (filter === 'Completed') return deadline.isCompleted
@@ -49,6 +87,8 @@ export default function Dashboard({ session }) {
       setDeadlines((current) => [...current, created].sort((a, b) => new Date(a.dueAt) - new Date(b.dueAt)))
       setForm(emptyForm)
       setFilter('Active')
+      setJustAddedId(created.id)
+      setToast('Deadline added')
     } catch (requestError) {
       setError(requestError.message)
     } finally {
@@ -57,7 +97,9 @@ export default function Dashboard({ session }) {
   }
 
   const setCompletion = async (deadline) => {
+    if (pendingIds.has(deadline.id)) return
     setError('')
+    markPending(deadline.id, true)
     try {
       const updated = await apiRequest(`/deadlines/${deadline.id}/completion`, {
         token: session.token,
@@ -65,18 +107,26 @@ export default function Dashboard({ session }) {
         body: JSON.stringify({ completed: !deadline.isCompleted }),
       })
       setDeadlines((current) => current.map((item) => item.id === updated.id ? updated : item))
+      setToast(updated.isCompleted ? 'Marked complete' : 'Moved back to active')
     } catch (requestError) {
       setError(requestError.message)
+    } finally {
+      markPending(deadline.id, false)
     }
   }
 
-  const deleteDeadline = async (deadlineId) => {
+  const deleteDeadline = async (deadline) => {
+    if (pendingIds.has(deadline.id)) return
     setError('')
+    markPending(deadline.id, true)
     try {
-      await apiRequest(`/deadlines/${deadlineId}`, { token: session.token, method: 'DELETE' })
-      setDeadlines((current) => current.filter((deadline) => deadline.id !== deadlineId))
+      await apiRequest(`/deadlines/${deadline.id}`, { token: session.token, method: 'DELETE' })
+      setDeadlines((current) => current.filter((item) => item.id !== deadline.id))
+      setToast('Deadline deleted')
     } catch (requestError) {
       setError(requestError.message)
+    } finally {
+      markPending(deadline.id, false)
     }
   }
 
@@ -84,84 +134,92 @@ export default function Dashboard({ session }) {
     <div className="mx-auto max-w-6xl">
       <header className="mb-8">
         <p className="text-sm font-semibold uppercase tracking-wide text-primary-600">Dashboard</p>
-        <h1 className="mt-1 text-3xl font-bold text-secondary-950">Upcoming deadlines</h1>
-        <p className="mt-2 text-secondary-600">Keep applications, scholarships, tests, and visa tasks on schedule.</p>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight text-secondary-950">Upcoming deadlines</h1>
+        <p className="mt-2 text-secondary-500">
+          Keep applications, scholarships, tests, and visa tasks on schedule.
+        </p>
       </header>
 
-      <section className="mb-8 grid gap-4 sm:grid-cols-3">
-        <Stat label="Active" value={counts.active} color="brand" />
-        <Stat label="Overdue" value={counts.overdue} color="danger" />
-        <Stat label="Completed" value={counts.completed} color="neutral" />
+      <section aria-label="Deadline summary" className="mb-8 grid gap-4 sm:grid-cols-3">
+        <StatCard tone="active" label="Active" value={counts.active} hint="Still to do" />
+        <StatCard tone="overdue" label="Overdue" value={counts.overdue} hint="Past their due date" />
+        <StatCard tone="completed" label="Completed" value={counts.completed} hint="Ticked off" />
       </section>
 
-      {error && <div className="mb-6 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{error}</div>}
+      {error && (
+        <div
+          className="mb-6 flex items-start justify-between gap-4 rounded-2xl border border-danger-100 bg-danger-50 px-4 py-3 text-sm text-danger-700"
+          role="alert"
+        >
+          <span>{error}</span>
+          <button
+            aria-label="Dismiss error"
+            className={`shrink-0 rounded-lg p-1 text-danger-600 transition hover:bg-danger-100 ${FOCUS}`}
+            onClick={() => setError('')}
+            type="button"
+          >
+            <CloseIcon className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
-      <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="rounded-xl border border-secondary-200 bg-white shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-secondary-200 px-5 py-4">
-            <h2 className="font-semibold text-secondary-950">Your deadlines</h2>
-            <div className="flex rounded-lg bg-secondary-100 p-1">
-              {['Active', 'Overdue', 'Completed'].map((option) => (
-                <button className={`rounded-md px-3 py-1.5 text-xs font-semibold ${filter === option ? 'bg-white text-secondary-950 shadow-sm' : 'text-secondary-600'}`} key={option} onClick={() => setFilter(option)} type="button">{option}</button>
+      {/* Two columns from lg (1024px) — at xl the form dropped below the whole list on
+          the most common laptop widths. */}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] xl:gap-8">
+        <section className={`overflow-hidden ${CARD}`}>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-secondary-200/70 px-5 py-4">
+            <h2 className="font-bold text-secondary-950">Your deadlines</h2>
+            <div className="flex rounded-lg bg-secondary-100 p-1" role="group" aria-label="Filter deadlines">
+              {filters.map((option) => (
+                <button
+                  aria-pressed={filter === option}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${FOCUS} ${
+                    filter === option
+                      ? 'bg-white text-secondary-950 shadow-[0_1px_2px_rgba(27,36,50,0.10)]'
+                      : 'text-secondary-500 hover:text-secondary-800'
+                  }`}
+                  key={option}
+                  onClick={() => setFilter(option)}
+                  type="button"
+                >
+                  {option}
+                </button>
               ))}
             </div>
           </div>
-          <div className="divide-y divide-secondary-100">
-            {loading && <EmptyState>Loading deadlines…</EmptyState>}
-            {!loading && visibleDeadlines.length === 0 && <EmptyState>No {filter.toLowerCase()} deadlines.</EmptyState>}
-            {visibleDeadlines.map((deadline) => <DeadlineRow deadline={deadline} key={deadline.id} now={now} onDelete={deleteDeadline} onToggle={setCompletion} />)}
-          </div>
+
+          {loading ? (
+            <DeadlineSkeleton />
+          ) : visibleDeadlines.length === 0 ? (
+            <EmptyState filter={filter} onAdd={() => titleRef.current?.focus()} />
+          ) : (
+            <div className="divide-y divide-secondary-100">
+              {visibleDeadlines.map((deadline) => (
+                <DeadlineRow
+                  deadline={deadline}
+                  justAdded={deadline.id === justAddedId}
+                  key={deadline.id}
+                  now={now}
+                  onDelete={deleteDeadline}
+                  onToggle={setCompletion}
+                  pending={pendingIds.has(deadline.id)}
+                />
+              ))}
+            </div>
+          )}
         </section>
 
-        <section className="h-fit rounded-xl border border-secondary-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-secondary-950">Add a deadline</h2>
-          <form className="mt-5 space-y-4" onSubmit={createDeadline}>
-            <Input label="Task" name="title" placeholder="Submit university application" value={form.title} onChange={(value) => setForm({ ...form, title: value })} />
-            <label className="block text-sm font-medium text-secondary-700" htmlFor="category">Category
-              <select className="mt-2 w-full rounded-lg border border-secondary-300 bg-white px-3 py-2.5" id="category" onChange={(event) => setForm({ ...form, category: event.target.value })} value={form.category}>
-                {['Application', 'Scholarship', 'Visa', 'Exam', 'Document', 'Other'].map((category) => <option key={category}>{category}</option>)}
-              </select>
-            </label>
-            <Input label="Due date and time" name="dueAt" type="datetime-local" value={form.dueAt} onChange={(value) => setForm({ ...form, dueAt: value })} />
-            <label className="block text-sm font-medium text-secondary-700" htmlFor="notes">Notes <span className="font-normal text-secondary-400">(optional)</span>
-              <textarea className="mt-2 min-h-20 w-full rounded-lg border border-secondary-300 px-3 py-2.5" id="notes" maxLength={1000} onChange={(event) => setForm({ ...form, notes: event.target.value })} value={form.notes} />
-            </label>
-            <button className="w-full rounded-lg bg-primary-500 px-4 py-2.5 font-semibold text-white hover:bg-primary-600 disabled:opacity-60" disabled={saving} type="submit">{saving ? 'Adding…' : 'Add deadline'}</button>
-          </form>
-        </section>
+        <AddDeadlineForm
+          form={form}
+          minDueAt={minDueAt}
+          onChange={setForm}
+          onSubmit={createDeadline}
+          saving={saving}
+          titleRef={titleRef}
+        />
       </div>
+
+      <Toast message={toast} />
     </div>
   )
-}
-
-function DeadlineRow({ deadline, now, onDelete, onToggle }) {
-  const due = new Date(deadline.dueAt)
-  const overdue = !deadline.isCompleted && due.getTime() < now
-  return (
-    <article className="flex gap-4 px-5 py-4">
-      <button aria-label={deadline.isCompleted ? 'Reopen deadline' : 'Complete deadline'} className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${deadline.isCompleted ? 'border-primary-500 bg-primary-500 text-white' : 'border-secondary-300'}`} onClick={() => onToggle(deadline)} type="button">{deadline.isCompleted ? '✓' : ''}</button>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className={`font-semibold ${deadline.isCompleted ? 'text-secondary-400 line-through' : 'text-secondary-950'}`}>{deadline.title}</h3>
-          <span className="rounded-full bg-secondary-100 px-2 py-0.5 text-xs font-medium text-secondary-600">{deadline.category}</span>
-        </div>
-        <p className={`mt-1 text-sm font-medium ${overdue ? 'text-red-600' : 'text-secondary-500'}`}>{overdue ? 'Overdue · ' : ''}{due.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</p>
-        {deadline.notes && <p className="mt-2 text-sm text-secondary-600">{deadline.notes}</p>}
-      </div>
-      <button aria-label="Delete deadline" className="self-start text-sm font-medium text-secondary-400 hover:text-red-600" onClick={() => onDelete(deadline.id)} type="button">Delete</button>
-    </article>
-  )
-}
-
-function Stat({ label, value, color }) {
-  const colors = { brand: 'bg-primary-50 text-primary-700', danger: 'bg-red-50 text-red-700', neutral: 'bg-white text-secondary-800' }
-  return <div className={`rounded-xl border border-secondary-200 p-5 ${colors[color]}`}><p className="text-sm font-medium">{label}</p><p className="mt-2 text-3xl font-bold">{value}</p></div>
-}
-
-function Input({ label, name, value, onChange, ...props }) {
-  return <label className="block text-sm font-medium text-secondary-700" htmlFor={name}>{label}<input className="mt-2 w-full rounded-lg border border-secondary-300 px-3 py-2.5" id={name} name={name} onChange={(event) => onChange(event.target.value)} required value={value} {...props} /></label>
-}
-
-function EmptyState({ children }) {
-  return <p className="px-5 py-12 text-center text-sm text-secondary-500">{children}</p>
 }
