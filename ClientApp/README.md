@@ -1,16 +1,48 @@
-# React + Vite
+# FutureWings — ClientApp
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+The React frontend for FutureWings, a study-abroad planning platform: a public
+marketing homepage plus a signed-in student workspace (deadline tracking, program
+discovery, and an admin console).
 
-Currently, two official plugins are available:
+Built with React 19, Vite, and Tailwind CSS. Plain JSX — there is no TypeScript,
+router, or state-management library.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Running it
 
-## React Compiler
+```bash
+npm install
+npm run dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+The dev server runs at http://localhost:5173 and proxies `/api` to the backend at
+http://localhost:5002, so **the backend must be running for anything past the
+homepage to load**. See the [repository README](../README.md) for backend setup —
+database, migrations, and the required JWT secret.
 
-## Expanding the Oxlint configuration
+## Scripts
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Start the dev server with HMR |
+| `npm run build` | Production build to `dist/` |
+| `npm run preview` | Serve the production build locally |
+| `npm run lint` | Run oxlint |
+
+There is no test runner configured yet.
+
+## Layout
+
+```
+src/
+  App.jsx              Shell, auth gate, and page switching
+  auth.js              Session storage + the shared fetch wrapper
+  pages/               One file per destination in the nav
+  components/
+    auth/              Shared login/register form primitives
+    dashboard/         Deadline dashboard pieces
+    home/              Public homepage sections
+```
+
+Brand colours and the shared palette live in `tailwind.config.js` as theme tokens
+(`primary`, `secondary`, `accent`, `success`, `warning`, `danger`, `surface`) —
+prefer those over arbitrary hex values.

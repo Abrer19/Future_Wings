@@ -1,0 +1,3 @@
+Placeholder so the folder is tracked. Integration tests for FutureWings.Web
+controllers belong here (they will need Microsoft.AspNetCore.Mvc.Testing, which is
+not yet referenced).
