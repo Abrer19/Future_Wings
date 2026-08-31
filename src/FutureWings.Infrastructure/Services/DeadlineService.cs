@@ -10,12 +10,10 @@ public sealed class DeadlineService(FutureWingsDbContext context) : IDeadlineSer
 {
     public async Task<IReadOnlyList<DeadlineDto>> GetAllAsync(int userId)
     {
-        if (!await context.Deadlines.AnyAsync(deadline => deadline.UserId == userId))
-        {
-            context.Deadlines.AddRange(DefaultDeadlineFactory.CreateForUser(userId, DateTimeOffset.UtcNow));
-            await context.SaveChangesAsync();
-        }
-
+        // No seeding here. Onboarding deadlines are created once, during registration
+        // (AuthService.RegisterAsync). Seeding from this read path meant that deleting
+        // every deadline brought them all back on the next fetch, so a delete was never
+        // durable and an empty list was unreachable.
         return await context.Deadlines
             .AsNoTracking()
             .Where(deadline => deadline.UserId == userId)
