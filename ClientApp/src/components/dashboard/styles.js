@@ -32,4 +32,4 @@ export const BTN_PRIMARY =
   `inline-flex items-center justify-center gap-2 rounded-lg bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-60 ${FOCUS}`
 
 export const BTN_QUIET =
-  `inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-secondary-500 transition hover:bg-secondary-100 hover:text-secondary-800 disabled:cursor-not-allowed disabled:opacity-50 ${FOCUS}`
+  `inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-secondary-500 sm:min-h-8 transition hover:bg-secondary-100 hover:text-secondary-800 disabled:cursor-not-allowed disabled:opacity-50 ${FOCUS}`
