@@ -1,4 +1,4 @@
-import { BTN_PRIMARY, CARD, CONTROL } from './styles.js'
+import { BTN_PRIMARY, CARD, CONTROL } from '../ui/styles.js'
 import { PlusIcon, SpinnerIcon } from './icons.jsx'
 
 const categories = ['Application', 'Scholarship', 'Visa', 'Exam', 'Document', 'Other']

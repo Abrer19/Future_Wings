@@ -14,6 +14,14 @@ public class User
     /// </summary>
     public bool HasSeededDeadlines { get; set; }
 
+    /// <summary>Free | Pro | Premium. Drives feature entitlements.</summary>
+    public string SubscriptionTier { get; set; } = "Free";
+
+    /// Stripe identifiers. Null until the user starts a paid checkout.
+    public string? StripeCustomerId { get; set; }
+    public string? StripeSubscriptionId { get; set; }
+    public DateTimeOffset? SubscriptionRenewsAt { get; set; }
+
     public UserProfile? Profile { get; set; }
     public ICollection<Application> Applications { get; set; } = [];
     public ICollection<Document> Documents { get; set; } = [];
