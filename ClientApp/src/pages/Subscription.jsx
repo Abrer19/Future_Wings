@@ -46,10 +46,26 @@ export default function Subscription({ session, subscription, onSubscriptionChan
     return () => window.clearTimeout(timer)
   }, [toast])
 
+  const simulated = subscription?.simulationEnabled === true
+
   const upgrade = async (tier) => {
     setBusyTier(tier)
     setError('')
     try {
+      if (simulated) {
+        // Development-only path: the server grants the tier without taking payment.
+        // It refuses unless simulation is enabled and no real Stripe key is configured.
+        await apiRequest('/subscription/simulate-checkout', {
+          token: session.token,
+          method: 'POST',
+          body: JSON.stringify({ tier }),
+        })
+        onSubscriptionChange?.()
+        setToast(`Test payment accepted — you're on ${tier}.`)
+        setBusyTier('')
+        return
+      }
+
       const { checkoutUrl } = await apiRequest('/subscription/checkout', {
         token: session.token,
         method: 'POST',
@@ -59,6 +75,24 @@ export default function Subscription({ session, subscription, onSubscriptionChan
       window.location.assign(checkoutUrl)
     } catch (requestError) {
       setError(requestError.message)
+      setBusyTier('')
+    }
+  }
+
+  // Test-mode only: lets the tiers be demoed repeatedly without a database edit.
+  const downgrade = async () => {
+    setBusyTier('Free')
+    setError('')
+    try {
+      await apiRequest('/subscription/simulate-checkout', {
+        token: session.token,
+        method: 'POST',
+        body: JSON.stringify({ tier: 'Free' }),
+      })
+    } catch (requestError) {
+      setError(requestError.message)
+    } finally {
+      onSubscriptionChange?.()
       setBusyTier('')
     }
   }
@@ -82,7 +116,18 @@ export default function Subscription({ session, subscription, onSubscriptionChan
         </div>
       )}
 
-      {subscription && subscription.stripeConfigured === false && (
+      {subscription && simulated && (
+        <div className="mb-6 flex flex-wrap items-center gap-2 rounded-2xl border border-warning-100 bg-warning-50 px-4 py-3 text-sm text-warning-700">
+          <span className="rounded-md bg-warning-500 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+            Test mode
+          </span>
+          <span>
+            Card payments aren&rsquo;t connected yet, so upgrading here is simulated — no money is
+            taken and no card is needed.
+          </span>
+        </div>
+      )}
+      {subscription && !simulated && subscription.stripeConfigured === false && (
         <div className="mb-6 rounded-2xl border border-warning-100 bg-warning-50 px-4 py-3 text-sm text-warning-700">
           Payments aren&rsquo;t switched on yet, so upgrades are unavailable. Everything on the Free
           plan works normally.
@@ -131,7 +176,16 @@ export default function Subscription({ session, subscription, onSubscriptionChan
                   {isCurrent ? (
                     <p className="text-sm font-medium text-secondary-500">You&rsquo;re on this plan.</p>
                   ) : isFree ? (
-                    <p className="text-sm text-secondary-500">Included by default.</p>
+                    simulated ? (
+                      <button
+                        className={`w-full rounded-lg border border-secondary-200 px-4 py-2.5 text-sm font-semibold text-secondary-700 transition hover:border-secondary-300 disabled:opacity-60 ${FOCUS}`}
+                        disabled={busyTier === 'Free'}
+                        onClick={() => downgrade()}
+                        type="button"
+                      >
+                        {busyTier === 'Free' ? 'Applying…' : 'Switch back to Free'}
+                      </button>
+                    ) : <p className="text-sm text-secondary-500">Included by default.</p>
                   ) : (
                     <button
                       className={`w-full ${BTN_PRIMARY} ${FOCUS}`}
@@ -139,11 +193,16 @@ export default function Subscription({ session, subscription, onSubscriptionChan
                       onClick={() => upgrade(plan.tier)}
                       type="button"
                     >
-                      {busyTier === plan.tier ? 'Opening checkout…' : `Upgrade to ${plan.name}`}
+                      {busyTier === plan.tier
+                        ? (simulated ? 'Applying…' : 'Opening checkout…')
+                        : simulated ? `Upgrade to ${plan.name} (test)` : `Upgrade to ${plan.name}`}
                     </button>
                   )}
                   {!isCurrent && !isFree && !plan.purchasable && (
                     <p className="mt-2 text-xs text-secondary-400">Unavailable until payments are configured.</p>
+                  )}
+                  {!isCurrent && !isFree && plan.purchasable && simulated && (
+                    <p className="mt-2 text-xs text-secondary-400">Simulated — no payment is taken.</p>
                   )}
                 </div>
               </li>
