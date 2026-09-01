@@ -35,6 +35,9 @@ public sealed class FutureWingsDbContext(DbContextOptions<FutureWingsDbContext> 
             entity.HasIndex(user => user.Email).IsUnique();
             entity.Property(user => user.PasswordHash).HasMaxLength(100);
             entity.Property(user => user.Role).HasMaxLength(20).HasDefaultValue("Student");
+            entity.Property(user => user.SubscriptionTier).HasMaxLength(20).HasDefaultValue("Free");
+            entity.Property(user => user.StripeCustomerId).HasMaxLength(64);
+            entity.Property(user => user.StripeSubscriptionId).HasMaxLength(64);
 
             entity.HasOne(user => user.Profile)
                 .WithOne(profile => profile.User)
@@ -65,7 +68,16 @@ public sealed class FutureWingsDbContext(DbContextOptions<FutureWingsDbContext> 
                 .HasForeignKey(deadline => deadline.UserId);
         });
 
-        modelBuilder.Entity<UserProfile>().HasKey(profile => profile.Id);
+        modelBuilder.Entity<UserProfile>(entity =>
+        {
+            entity.HasKey(profile => profile.Id);
+            entity.Property(profile => profile.FirstName).HasMaxLength(100);
+            entity.Property(profile => profile.LastName).HasMaxLength(100);
+            entity.Property(profile => profile.Major).HasMaxLength(100);
+            entity.Property(profile => profile.DegreeLevel).HasMaxLength(50);
+            entity.Property(profile => profile.Cgpa).HasPrecision(3, 2);
+            entity.Property(profile => profile.BudgetUsd).HasPrecision(12, 2);
+        });
 
         modelBuilder.Entity<Country>(entity =>
         {
@@ -150,6 +162,9 @@ public sealed class FutureWingsDbContext(DbContextOptions<FutureWingsDbContext> 
         {
             entity.HasKey(payment => payment.Id);
             entity.Property(payment => payment.Amount).HasPrecision(18, 2);
+            entity.Property(payment => payment.Currency).HasMaxLength(10);
+            entity.Property(payment => payment.Status).HasMaxLength(30);
+            entity.Property(payment => payment.Reference).HasMaxLength(128);
         });
 
         modelBuilder.Entity<Deadline>(entity =>
