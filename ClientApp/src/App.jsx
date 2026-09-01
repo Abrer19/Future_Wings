@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
-import { clearSession, loadSession, saveSession } from './auth.js'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { apiRequest, clearSession, loadSession, saveSession } from './auth.js'
+import LockedFeature from './components/ui/LockedFeature.jsx'
 import Admin from './pages/Admin.jsx'
+import AiInterview from './pages/AiInterview.jsx'
 import Applications from './pages/Applications.jsx'
 import Community from './pages/Community.jsx'
 import Dashboard from './pages/Dashboard.jsx'
@@ -12,6 +14,7 @@ import Recommendations from './pages/Recommendations.jsx'
 import Register from './pages/Register.jsx'
 import Roadmap from './pages/Roadmap.jsx'
 import Scholarships from './pages/Scholarships.jsx'
+import Subscription from './pages/Subscription.jsx'
 import VisaCheck from './pages/VisaCheck.jsx'
 
 const pages = {
@@ -24,17 +27,47 @@ const pages = {
   'Visa Check': VisaCheck,
   Scholarships,
   Community,
+  'AI Interview': AiInterview,
+  Plans: Subscription,
   Admin,
   Login,
   Register,
 }
 
+// Which paid feature each page needs. Pages absent from this map are always available.
+// Keys must match the feature keys the server returns from GET /api/subscription/me.
+const PAGE_FEATURE = {
+  Roadmap: 'roadmap',
+  'AI Interview': 'aiInterview',
+}
+
+// Only used for the upgrade prompt's wording.
+const FEATURE_TIER = { roadmap: 'Pro', aiInterview: 'Premium' }
+
 function App() {
   const [session, setSession] = useState(loadSession)
   const [activePage, setActivePage] = useState(session ? 'Dashboard' : 'Home')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [subscription, setSubscription] = useState(null)
   const menuButtonRef = useRef(null)
   const ActivePage = pages[activePage]
+
+  // Entitlements drive which nav items are unlocked. Until this resolves the user is
+  // treated as Free, so a paid page is never briefly exposed on a slow network.
+  const loadSubscription = useCallback(() => {
+    if (!session?.token) return
+    apiRequest('/subscription/me', { token: session.token })
+      .then(setSubscription)
+      .catch(() => setSubscription({ tier: 'Free', features: [] }))
+  }, [session])
+
+  useEffect(() => { loadSubscription() }, [loadSubscription])
+
+  const features = subscription?.features ?? []
+  const isLocked = (page) => {
+    const required = PAGE_FEATURE[page]
+    return Boolean(required) && !features.includes(required)
+  }
 
   // Below lg the nav is a collapsible drawer; Escape closes it and returns focus to
   // the control that opened it so keyboard users are never stranded inside it.
@@ -59,6 +92,7 @@ function App() {
   const handleLogout = () => {
     clearSession()
     setSession(null)
+    setSubscription(null)
     setActivePage('Home')
     setMenuOpen(false)
   }
@@ -135,14 +169,23 @@ function App() {
                 onClick={() => goTo(page)}
                 type="button"
               >
-                {page}
+                <span className="flex-1 truncate">{page}</span>
+                {isLocked(page) && (
+                  <span aria-label="(requires an upgrade)" className="ml-2 shrink-0 text-secondary-400" role="img" title="Requires an upgrade">
+                    <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24">
+                      <rect height="10" rx="2" width="14" x="5" y="11" />
+                      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+                    </svg>
+                  </span>
+                )}
               </button>
             ))}
           </nav>
           <div className="mt-6 border-t border-secondary-200 px-2 pt-4 lg:mt-8">
             <p className="truncate text-sm font-medium text-secondary-900">{session.firstName} {session.lastName}</p>
             <p className="truncate text-xs text-secondary-500">{session.email}</p>
-            <span className="mt-2 inline-flex rounded-full bg-secondary-100 px-2 py-0.5 text-xs font-medium text-secondary-600">{session.role ?? 'Student'}</span>
+            <span className="mt-2 mr-1 inline-flex rounded-full bg-secondary-100 px-2 py-0.5 text-xs font-medium text-secondary-600">{session.role ?? 'Student'}</span>
+            <span className="mt-2 inline-flex rounded-full bg-primary-50 px-2 py-0.5 text-xs font-semibold text-primary-700">{subscription?.tier ?? 'Free'}</span>
             <button
               className="mt-3 flex min-h-11 w-full items-center rounded-md px-1 text-sm font-medium text-danger-600 transition hover:bg-danger-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
               onClick={handleLogout}
@@ -154,7 +197,20 @@ function App() {
         </div>
       </aside>
       <main className="p-4 sm:p-6 lg:p-10">
-        <ActivePage onNavigate={goTo} session={session} />
+        {isLocked(activePage) ? (
+          <LockedFeature
+            onUpgrade={() => goTo('Plans')}
+            page={activePage}
+            requiredTier={FEATURE_TIER[PAGE_FEATURE[activePage]] ?? 'Pro'}
+          />
+        ) : (
+          <ActivePage
+            onNavigate={goTo}
+            onSubscriptionChange={loadSubscription}
+            session={session}
+            subscription={subscription}
+          />
+        )}
       </main>
     </div>
   )
