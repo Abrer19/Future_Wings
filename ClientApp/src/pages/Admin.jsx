@@ -60,7 +60,7 @@ export default function Admin({ session }) {
       </header>
 
       {error && <div className="mt-6 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{error}</div>}
-      {loading && <div className="mt-8 rounded-xl border border-secondary-200 bg-white p-12 text-center text-secondary-500">Loading admin data…</div>}
+      {loading && <div className="mt-8 rounded-2xl border border-secondary-200 bg-white p-12 text-center text-secondary-500">Loading admin data…</div>}
 
       {!loading && dashboard && <>
         <section className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -105,7 +105,7 @@ function Overview({ dashboard }) {
 
 function UserDirectory({ users, currentUserId, onRoleChange }) {
   return (
-    <section className="mt-6 overflow-hidden rounded-xl border border-secondary-200 bg-white shadow-sm">
+    <section className="mt-6 overflow-hidden rounded-2xl border border-secondary-200 bg-white shadow-sm">
       <div className="overflow-x-auto"><table className="w-full text-left text-sm">
         <thead className="bg-secondary-50 text-xs uppercase tracking-wide text-secondary-500"><tr><th className="px-5 py-3">User</th><th className="px-5 py-3">Role</th><th className="px-5 py-3">Applications</th><th className="px-5 py-3">Deadlines</th><th className="px-5 py-3">Access</th></tr></thead>
         <tbody className="divide-y divide-secondary-100">{users.map((user) => (
@@ -123,11 +123,11 @@ function UserDirectory({ users, currentUserId, onRoleChange }) {
 }
 
 function Metric({ label, value, detail, alert }) {
-  return <div className="rounded-xl border border-secondary-200 bg-white p-5 shadow-sm"><p className="text-sm font-medium text-secondary-500">{label}</p><p className="mt-2 text-3xl font-bold text-secondary-950">{value}</p><p className={`mt-2 text-xs font-medium ${alert ? 'text-red-600' : 'text-secondary-400'}`}>{detail}</p></div>
+  return <div className="rounded-2xl border border-secondary-200 bg-white p-5 shadow-sm"><p className="text-sm font-medium text-secondary-500">{label}</p><p className="mt-2 text-3xl font-bold text-secondary-950">{value}</p><p className={`mt-2 text-xs font-medium ${alert ? 'text-red-600' : 'text-secondary-400'}`}>{detail}</p></div>
 }
 
 function Panel({ title, children }) {
-  return <section className="overflow-hidden rounded-xl border border-secondary-200 bg-white shadow-sm"><h2 className="border-b border-secondary-200 px-5 py-4 font-semibold text-secondary-950">{title}</h2>{children}</section>
+  return <section className="overflow-hidden rounded-2xl border border-secondary-200 bg-white shadow-sm"><h2 className="border-b border-secondary-200 px-5 py-4 font-semibold text-secondary-950">{title}</h2>{children}</section>
 }
 
 function Badge({ children }) {

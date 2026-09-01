@@ -229,7 +229,7 @@ export default function AiInterview({ session }) {
               analysed on your device and never uploaded or saved.
             </p>
 
-            <div className="mt-4 overflow-hidden rounded-xl bg-secondary-900">
+            <div className="mt-4 overflow-hidden rounded-2xl bg-secondary-900">
               {/* eslint-disable-next-line jsx-a11y/media-has-caption -- live self-view, no audio track */}
               <video className="aspect-video w-full object-cover" muted playsInline ref={videoRef} />
             </div>
