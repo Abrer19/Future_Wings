@@ -40,6 +40,22 @@ public sealed class SubscriptionService(FutureWingsDbContext context, IConfigura
 
     public bool StripeConfigured => SecretKey is not null;
 
+    /// <summary>
+    /// Fake checkout, for local development and demos.
+    ///
+    /// Two independent conditions must BOTH hold, so this cannot be switched on by
+    /// accident:
+    ///   1. Stripe:AllowSimulatedCheckout is explicitly true. That key lives only in
+    ///      appsettings.Development.json, which is not loaded outside Development.
+    ///   2. No real Stripe secret key is configured. The moment real keys are added,
+    ///      simulated upgrades stop working on their own — you cannot end up with a
+    ///      live payment processor and a bypass running side by side.
+    /// </summary>
+    public bool SimulationEnabled =>
+        !StripeConfigured
+        && bool.TryParse(configuration["Stripe:AllowSimulatedCheckout"], out var allowed)
+        && allowed;
+
     public IReadOnlyList<SubscriptionPlanDto> GetPlans() =>
         SubscriptionPlans.All.Select(plan => new SubscriptionPlanDto
         {
@@ -50,7 +66,9 @@ public sealed class SubscriptionService(FutureWingsDbContext context, IConfigura
             Highlights = plan.Highlights,
             Features = plan.Features,
             // A free plan is always "purchasable"; a paid one needs a configured price id.
-            Purchasable = !SubscriptionPlans.IsPaid(plan.Tier) || (StripeConfigured && PriceIdFor(plan.Tier) is not null),
+            Purchasable = !SubscriptionPlans.IsPaid(plan.Tier)
+                || (StripeConfigured && PriceIdFor(plan.Tier) is not null)
+                || SimulationEnabled,
         }).ToList();
 
     public async Task<SubscriptionStatusDto> GetStatusAsync(int userId)
@@ -67,6 +85,7 @@ public sealed class SubscriptionService(FutureWingsDbContext context, IConfigura
             Features = SubscriptionPlans.FeaturesFor(user.SubscriptionTier),
             RenewsAt = user.SubscriptionRenewsAt,
             StripeConfigured = StripeConfigured,
+            SimulationEnabled = SimulationEnabled,
         };
     }
 
@@ -115,6 +134,51 @@ public sealed class SubscriptionService(FutureWingsDbContext context, IConfigura
         });
 
         return new CheckoutSessionDto { SessionId = session.Id, CheckoutUrl = session.Url };
+    }
+
+    public async Task<SubscriptionStatusDto> SimulateUpgradeAsync(int userId, string tier)
+    {
+        if (!SimulationEnabled)
+        {
+            throw new InvalidOperationException(
+                "Simulated checkout is disabled. It is only available in development while no Stripe key is configured.");
+        }
+
+        // Unlike real checkout, Free is allowed here: it is how a tester drops back down
+        // to demo the tiers again without editing the database by hand.
+        if (!SubscriptionPlans.IsKnown(tier))
+        {
+            throw new ArgumentException("Choose the Free, Pro or Premium plan.");
+        }
+
+        var user = await context.Users.SingleOrDefaultAsync(candidate => candidate.Id == userId)
+            ?? throw new KeyNotFoundException("User not found.");
+
+        user.SubscriptionTier = tier;
+        // No Stripe subscription exists, so leave StripeSubscriptionId null — that keeps
+        // simulated accounts distinguishable from genuinely paying ones.
+        user.SubscriptionRenewsAt = SubscriptionPlans.IsPaid(tier)
+            ? DateTimeOffset.UtcNow.AddMonths(1)
+            : null;
+
+        if (SubscriptionPlans.IsPaid(tier))
+        {
+            var price = SubscriptionPlans.All.Single(plan => plan.Tier == tier).MonthlyPriceUsd;
+            context.Payments.Add(new Payment
+            {
+                UserId = user.Id,
+                Amount = price,
+                Currency = "usd",
+                // Deliberately NOT "Succeeded" — a simulated payment must never be mistaken
+                // for a real one when reading the Payments table.
+                Status = "Simulated",
+                Reference = $"sim_{Guid.NewGuid():N}",
+                CreatedAt = DateTimeOffset.UtcNow,
+            });
+        }
+
+        await context.SaveChangesAsync();
+        return await GetStatusAsync(userId);
     }
 
     public async Task<bool> ApplyWebhookAsync(string payload, string signatureHeader)

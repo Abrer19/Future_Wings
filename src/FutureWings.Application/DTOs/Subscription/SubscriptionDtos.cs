@@ -21,6 +21,12 @@ public class SubscriptionStatusDto
     public IReadOnlyList<string> Features { get; set; } = [];
     public DateTimeOffset? RenewsAt { get; set; }
     public bool StripeConfigured { get; set; }
+
+    /// <summary>
+    /// True when simulated (fake) checkout is available. Development only, and only
+    /// while no real Stripe key is configured.
+    /// </summary>
+    public bool SimulationEnabled { get; set; }
 }
 
 public class CheckoutSessionDto

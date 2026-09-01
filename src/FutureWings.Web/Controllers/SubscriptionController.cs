@@ -54,6 +54,32 @@ public class SubscriptionController(ISubscriptionService subscriptionService) : 
     }
 
     /// <summary>
+    /// Development-only fake checkout. Grants the tier without taking payment.
+    /// Returns 503 unless simulation is explicitly enabled and no real Stripe key exists,
+    /// so this endpoint is inert in any environment configured for real payments.
+    /// </summary>
+    [HttpPost("simulate-checkout")]
+    public async Task<IActionResult> SimulateCheckout(CheckoutRequest request)
+    {
+        try
+        {
+            return Ok(await subscriptionService.SimulateUpgradeAsync(GetUserId(), request.Tier));
+        }
+        catch (ArgumentException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (InvalidOperationException exception)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = exception.Message });
+        }
+    }
+
+    /// <summary>
     /// Stripe calls this. Anonymous by necessity — Stripe has no bearer token — but the
     /// payload signature is verified against Stripe:WebhookSecret before anything is
     /// applied, so an unsigned request can never grant a tier.
