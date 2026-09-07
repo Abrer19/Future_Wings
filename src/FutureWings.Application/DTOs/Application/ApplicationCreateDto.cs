@@ -1,7 +1,7 @@
 namespace FutureWings.Application.DTOs.Application;
 
-public class ApplicationCreateDto
+public sealed class ApplicationCreateDto
 {
+    [System.ComponentModel.DataAnnotations.Range(1, int.MaxValue)]
     public int ProgramId { get; set; }
-    public int? ScholarshipId { get; set; }
 }
