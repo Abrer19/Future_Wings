@@ -154,7 +154,14 @@ public sealed class FutureWingsDbContext(DbContextOptions<FutureWingsDbContext> 
         });
 
         modelBuilder.Entity<ApplicationState>().HasKey(state => state.Id);
-        modelBuilder.Entity<Document>().HasKey(document => document.Id);
+        modelBuilder.Entity<Document>(entity =>
+        {
+            entity.HasKey(document => document.Id);
+            entity.Property(document => document.FileName).HasMaxLength(255);
+            entity.Property(document => document.FilePath).HasMaxLength(500);
+            entity.Property(document => document.ContentType).HasMaxLength(100);
+            entity.HasIndex(document => new { document.UserId, document.UploadedAt });
+        });
         modelBuilder.Entity<VisaOutcome>().HasKey(outcome => outcome.Id);
         modelBuilder.Entity<Rating>().HasKey(rating => rating.Id);
         modelBuilder.Entity<Notification>().HasKey(notification => notification.Id);
