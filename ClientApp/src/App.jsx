@@ -7,6 +7,7 @@ import AiInterview from './pages/AiInterview.jsx'
 import Applications from './pages/Applications.jsx'
 import Community from './pages/Community.jsx'
 import Dashboard from './pages/Dashboard.jsx'
+import Documents from './pages/Documents.jsx'
 import Discovery from './pages/Discovery.jsx'
 import Home from './pages/Home.jsx'
 import Login from './pages/Login.jsx'
@@ -22,6 +23,7 @@ const pages = {
   Dashboard,
   Roadmap,
   Discovery,
+  Documents,
   Profile,
   Recommendations,
   Applications,
@@ -43,7 +45,7 @@ const pages = {
 const NAV_GROUPS = [
   { label: 'Overview', items: ['Dashboard', 'Roadmap'] },
   { label: 'Explore', items: ['Discovery', 'Recommendations', 'Scholarships', 'Community'] },
-  { label: 'Apply', items: ['Applications', 'Visa Check', 'AI Interview'] },
+  { label: 'Apply', items: ['Applications', 'Documents', 'Visa Check', 'AI Interview'] },
   { label: 'Account', items: ['Profile', 'Plans', 'Admin'] },
 ]
 
