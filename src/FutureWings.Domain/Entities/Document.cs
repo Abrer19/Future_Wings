@@ -6,6 +6,9 @@ public class Document
     public int UserId { get; set; }
     public string FileName { get; set; } = string.Empty;
     public string FilePath { get; set; } = string.Empty;
+    public string ContentType { get; set; } = "application/octet-stream";
+    public long SizeBytes { get; set; }
+    public DateTimeOffset UploadedAt { get; set; }
 
     public User User { get; set; } = null!;
 }

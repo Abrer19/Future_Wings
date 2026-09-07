@@ -129,11 +129,12 @@ the UI:
 | Authentication | Register/login, BCrypt hashing, JWT, role claims |
 | Deadlines | Full CRUD, scoped per user; 7 onboarding tasks seeded at registration |
 | Discovery | Program search, country/level filters, shortlist, comparison |
+| Documents | Authenticated PDF, Word and image upload/download/delete with local storage |
 | Applications | Authenticated create/list/status/delete workflow, scoped per student |
 | Admin | Dashboard metrics, user list, role changes with a self-demotion guard |
 
 The remaining services are **stubs** that return fixed placeholder values and never touch
-the database — Documents, Payments, Recommendations, Reviews,
+the database — Payments, Recommendations, Reviews,
 Scholarships, and Visa. Each is marked in source with a `STUB:` doc comment:
 
 ```powershell
@@ -144,7 +145,7 @@ Their frontend counterparts render a placeholder card. Do not build on their ret
 
 ## Known issues
 
-- **Unauthenticated user-scoped endpoints.** `Document`, `Payment`, and `Review`
+- **Unauthenticated user-scoped endpoints.** `Payment` and `Review`
   controllers take a user id from the route,
   query, or body and have no `[Authorize]` attribute. They are only harmless today
   because the services behind them are stubs; each needs an auth attribute and a

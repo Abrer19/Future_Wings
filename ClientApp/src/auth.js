@@ -39,7 +39,7 @@ export async function authenticate(endpoint, credentials) {
 
 export async function apiRequest(path, { token, ...options } = {}) {
   const headers = { ...options.headers }
-  if (options.body) headers['Content-Type'] = 'application/json'
+  if (options.body && !(options.body instanceof FormData)) headers['Content-Type'] = 'application/json'
   if (token) headers.Authorization = `Bearer ${token}`
 
   const response = await fetchApi(`${API_URL}${path}`, { ...options, headers })
