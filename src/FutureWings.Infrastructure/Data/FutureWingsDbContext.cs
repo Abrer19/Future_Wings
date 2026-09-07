@@ -143,6 +143,7 @@ public sealed class FutureWingsDbContext(DbContextOptions<FutureWingsDbContext> 
         modelBuilder.Entity<DomainApplication>(entity =>
         {
             entity.HasKey(application => application.Id);
+            entity.HasIndex(application => new { application.UserId, application.ProgramId }).IsUnique();
 
             entity.HasOne(application => application.State)
                 .WithMany(state => state.Applications)
