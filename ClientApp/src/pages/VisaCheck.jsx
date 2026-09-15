@@ -16,6 +16,22 @@ const meter = {
   High: { label: 'High', color: 'bg-danger-500', text: 'text-danger-700' },
 }
 
+// While the student fills the form, show a rough checklist meter. The API result
+// replaces it after evaluation and remains the only authoritative score.
+function previewScore(form) {
+  let score = 8
+  if (!form.hasFundingProof) score += 22
+  if (form.availableFundsUsd !== '' && form.annualTuitionUsd !== '') {
+    if (Number(form.availableFundsUsd) < Number(form.annualTuitionUsd) + 18000) score += 24
+  } else if (Number(form.financialAdequacyScore) < 70) score += 12
+  if (!form.hasLanguageScore) score += 18
+  if (form.hasLanguageScore && form.ieltsOverallScore !== '' && Number(form.ieltsOverallScore) < 6.5) score += 14
+  if (Number(form.tiesToHomeCountryScore) < 40) score += 12
+  else if (Number(form.tiesToHomeCountryScore) < 70) score += 6
+  if (form.hasPriorVisaRefusal) score += 14
+  return Math.min(100, score)
+}
+
 export default function VisaCheck({ session }) {
   const [step, setStep] = useState(0)
   const [form, setForm] = useState(initial)
@@ -90,6 +106,8 @@ export default function VisaCheck({ session }) {
   }
 
   const currentMeter = result ? meter[result.riskLevel] ?? meter.High : null
+  const preview = previewScore(form)
+  const previewLevel = preview < 30 ? 'Low' : preview < 60 ? 'Medium' : 'High'
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <header>
@@ -142,7 +160,7 @@ export default function VisaCheck({ session }) {
         <section aria-live="polite" className={`${CARD} space-y-5 p-5 sm:p-7`}>
           <h2 className="text-lg font-bold text-secondary-950">Readiness report</h2>
           {loading && <div className="space-y-3" role="status"><div className="h-3 w-3/4 animate-pulse rounded-full bg-primary-100" /><div className="h-3 w-full animate-pulse rounded-full bg-secondary-100" /><p className="text-sm text-secondary-500">Calculating your risk factors…</p></div>}
-          {!loading && !result && <p className="text-sm text-secondary-500">Complete the assessment or view a tracked application report to see your risk factors and checklist.</p>}
+          {!loading && !result && <><p className="text-sm text-secondary-500">This meter updates as you enter evidence. Complete the assessment for your full report.</p><div className="flex items-end justify-between"><span className={`text-lg font-bold ${meter[previewLevel].text}`}>{meter[previewLevel].label} provisional risk</span><span className="text-sm font-semibold text-secondary-700">{preview}/100</span></div><div aria-label={`Provisional risk score ${preview} of 100`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={preview} className="h-3 overflow-hidden rounded-full bg-secondary-100" role="progressbar"><div className={`h-full rounded-full transition-all duration-300 ${meter[previewLevel].color}`} style={{ width: `${preview}%` }} /></div></>}
           {!loading && result && <>
             <div><div className="flex items-end justify-between"><span className={`text-2xl font-bold ${currentMeter.text}`}>{currentMeter.label} risk</span><span className="text-sm font-semibold text-secondary-700">{result.riskScore}/100</span></div><div aria-label={`Risk score ${result.riskScore} of 100`} className="mt-3 h-3 overflow-hidden rounded-full bg-secondary-100" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={result.riskScore}><div className={`h-full rounded-full transition-all duration-700 ${currentMeter.color}`} style={{ width: `${result.riskScore}%` }} /></div></div>
             <div><h3 className="font-semibold text-secondary-950">Key risk factors</h3><ul className="mt-3 space-y-3">{result.reasons.map((reason) => <li className="flex gap-2 text-sm text-secondary-700" key={reason}><span aria-hidden="true" className={reason.startsWith('Check destination') ? 'text-success-600' : 'text-warning-600'}>{reason.startsWith('Check destination') ? '✓' : '⚠'}</span><span>{reason}</span></li>)}</ul></div>
