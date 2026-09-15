@@ -95,6 +95,10 @@ function App() {
   }, [session])
 
   useEffect(() => {
+    loadSubscription()
+  }, [loadSubscription])
+
+  useEffect(() => {
     const handleUnauthorized = () => {
       clearSession()
       setSession(null)
