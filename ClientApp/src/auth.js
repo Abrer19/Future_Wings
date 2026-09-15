@@ -45,6 +45,14 @@ export async function apiRequest(path, { token, ...options } = {}) {
   const response = await fetchApi(`${API_URL}${path}`, { ...options, headers })
   if (response.status === 204) return null
 
+  if (response.status === 401) {
+    clearSession()
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('futurewings:unauthorized'))
+    }
+    throw new Error('Your session has expired. Please sign in again.')
+  }
+
   const body = await response.json().catch(() => ({}))
   if (!response.ok) {
     const validationMessage = body.errors ? Object.values(body.errors).flat().join(' ') : null
