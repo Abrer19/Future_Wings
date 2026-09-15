@@ -102,6 +102,7 @@ using (var scope = app.Services.CreateScope())
     await context.Database.MigrateAsync();
     await ApplicationStateSeeder.SeedAsync(context);
     await DiscoverySeeder.SeedAsync(context);
+    await DemoUserSeeder.SeedAsync(context);
 }
 
 app.Run();
