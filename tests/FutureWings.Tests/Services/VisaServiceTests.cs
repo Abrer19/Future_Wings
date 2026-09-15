@@ -31,6 +31,14 @@ public sealed class VisaServiceTests
     }
 
     [Fact]
+    public void UnknownDestination_RequestsOfficialRequirements()
+    {
+        var request = ReadyRequest(); request.DestinationCountry = "Netherlands";
+        var result = VisaRiskCalculator.Calculate(request);
+        Assert.Contains(result.Recommendations, item => item.Contains("official student visa guidance"));
+    }
+
+    [Fact]
     public void MissingEvidenceAndShortFunds_AreHighRiskAndActionable()
     {
         var request = ReadyRequest();
