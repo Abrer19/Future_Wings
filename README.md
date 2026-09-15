@@ -1,158 +1,125 @@
 # FutureWings
 
-A study-abroad planning platform: students discover university programs, shortlist and
-compare them, and track application deadlines. Administrators get an operations console
-for users and activity.
+A modern, full-stack study-abroad planning and application tracking platform. Students discover university programs worldwide, shortlist and compare degrees, manage application lifecycles and deadlines, store essential visa and admission documents, and receive personalized AI-driven program recommendations. Administrators have an operations console for managing users and monitoring platform activity.
 
-**Stack** — .NET 8 Web API (JSON-only; the Razor/MVC scaffolding has been removed) with
-Entity Framework Core on SQL Server, and a React 19 + Vite + Tailwind frontend in
-`ClientApp/`. All UI lives in the React app.
+**Stack** — .NET 8 Web API with Entity Framework Core on SQL Server, paired with a modern React 19 + Vite + Tailwind CSS single-page application in `ClientApp/`.
 
-## Documentation
+---
 
-| Doc | Covers |
+## 📚 Documentation
+
+| Document | Description |
 | --- | --- |
-| [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md) | Layer rules, request flow, auth, DI, the stub convention, adding a feature end to end |
-| [docs/DATABASE.md](docs/DATABASE.md) | Schema, migration history, seeding, adding a migration |
-| [ClientApp/README.md](ClientApp/README.md) | Frontend setup and layout |
+| [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md) | Clean architecture rules, request flows, authentication, DI, and end-to-end feature guides |
+| [docs/DATABASE.md](docs/DATABASE.md) | Schema design, migrations history, reference seeders, and EF Core commands |
+| [ClientApp/README.md](ClientApp/README.md) | React 19 frontend setup, design tokens, and state management |
 
-## Prerequisites
+---
 
-- .NET SDK with the .NET 8 targeting pack
-- SQL Server Express (a local `.\SQLEXPRESS` instance works with no config change)
-- Node.js and npm
+## ⚙️ Prerequisites
 
-## Quick start
+- **.NET SDK 8.0+**
+- **SQL Server / SQL Server Express** (a local `.\SQLEXPRESS` instance connects out-of-the-box with Windows Authentication)
+- **Node.js 18+** & **npm**
 
+---
+
+## 🚀 Quick Start
+
+### 1. Backend Setup (.NET 8 Web API)
 ```powershell
-# 1. Backend dependencies
+# Restore dependencies
 dotnet restore
 
-# 2. Set the JWT signing key (once per machine — see below)
+# Set the JWT signing key (stored securely in user-secrets)
 dotnet user-secrets set "Jwt:Secret" "$([Convert]::ToBase64String((1..48 | ForEach-Object { Get-Random -Max 256 })))" --project src/FutureWings.Web
 
-# 3. Run the API — this creates and seeds the database on first start
+# Run the API (automatically runs migrations and seeds reference data on startup)
 dotnet run --project src/FutureWings.Web
+```
+The API starts on `http://localhost:5002` (and `https://localhost:7189`), with interactive Swagger UI at `http://localhost:5002/swagger`.
 
-# 4. In a second terminal, run the frontend
+> **Admin Account Promotion**: `AuthService.RegisterAsync` automatically assigns the **Admin** role to the first user created in the database. Subsequent registrations default to **Student**.
+
+### 2. Frontend Setup (React 19 + Vite)
+In a second terminal:
+```powershell
 cd ClientApp
 npm install
 npm run dev
 ```
+Open <http://localhost:5173>. Vite automatically proxies `/api` calls to the backend on port `5002`.
 
-Then open <http://localhost:5173>. The API listens on <http://localhost:5002> (and
-`https://localhost:7189` via the `https` launch profile), with Swagger UI at
-`/swagger` in Development.
+---
 
-**The backend must be running** for anything past the public homepage — Vite proxies
-`/api` to port 5002, and the signed-in pages will show an error banner without it.
+## 🧪 Automated Testing
 
-### The first account you register becomes an Admin
-
-`AuthService.RegisterAsync` promotes the very first user in the database to the `Admin`
-role; everyone after that is a `Student`. Register your own account first to get the
-Admin console.
-
-## Configuration
-
-### JWT signing key (required)
-
-The JWT secret is deliberately **not committed**. Startup throws immediately if it is
-missing, so a misconfigured machine fails loudly rather than signing tokens with a weak
-key.
-
-- **Development** — `dotnet user-secrets`, as in the quick start above.
-- **Production** — supply the `Jwt__Secret` environment variable.
-
-### Database
-
-The connection string in `src/FutureWings.Web/appsettings.json` targets `.\SQLEXPRESS`
-with Windows authentication, so a local SQL Server Express instance needs no edit. Point
-it elsewhere if your instance differs.
-
-On every start the API runs `Database.MigrateAsync()` and then seeds reference data
-(application lifecycle states, and the country/university/program catalogue). Both
-seeders are idempotent — restarting never duplicates rows. **You do not need to run
-`dotnet ef database update` manually**; it is only useful if you want to apply
-migrations without starting the app:
-
-```powershell
-dotnet tool restore
-dotnet ef database update --project src/FutureWings.Infrastructure --startup-project src/FutureWings.Web
-```
-
-### Other integrations
-
-`GeminiApi` and `Stripe` keys in `appsettings.json` are placeholders. Both services are
-signature-only stubs today and are not called by anything, so the app runs fine without
-real keys.
-
-## Tests
+The solution includes a comprehensive unit test suite running against in-memory database providers and testing cryptographic/token security:
 
 ```powershell
 dotnet test
 ```
 
-Three unit tests currently cover JWT claim generation and password hashing. There is no
-integration-test or frontend-test suite yet. Stop the API before building — a running
-instance locks the output DLLs and `dotnet build` will fail with `MSB3021`.
+### Test Coverage (21 Tests)
+- **Authentication**: Token claim injection, role authorization, BCrypt password hashing & salt verification.
+- **Applications**: Multi-status workflow (`Draft`, `Submitted`, `Under Review`, `Accepted`, `Withdrawn`), user isolation, deletion.
+- **Deadlines**: Task creation, sorting, category filtering, completion toggles, removal.
+- **Student Profile**: GPA, budget, major, and degree-level persistence.
+- **Recommendations**: Multi-factor ranking engine (academic fit, budget match, and personalized explanation generation).
+- **Documents**: File vault upload, content-type verification, metadata persistence, and deletion.
 
-## Solution layout
+---
 
-```
-src/
-  FutureWings.Domain/          Entities only. No dependencies on anything.
-  FutureWings.Application/     DTOs and service interfaces (the contracts).
-  FutureWings.Infrastructure/  EF Core DbContext, migrations, seeders, and every
-                               concrete service implementation (real and stub).
-  FutureWings.Web/             API controllers, SignalR hub, composition root.
-tests/
-  FutureWings.Tests/           Services/ and Controllers/ (the latter awaiting
-                               integration tests).
-ClientApp/                     React frontend — see ClientApp/README.md.
-```
+## 🏗️ Solution Architecture
 
-Dependencies point inward: `Domain <- Application <- Infrastructure <- Web`. Interfaces
-live in `Application/Interfaces/`; implementations always live in `Infrastructure/Services/`.
-
-`FutureWings.Web.csproj` sets `<StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>`.
-This is required, not cosmetic: the project has no `wwwroot`, and without it the SDK's
-static-web-assets manifest makes startup throw `DirectoryNotFoundException`.
-
-## Feature status
-
-Not every endpoint is implemented. These are backed by the database and reachable from
-the UI:
-
-| Feature | Notes |
-| --- | --- |
-| Authentication | Register/login, BCrypt hashing, JWT, role claims |
-| Deadlines | Full CRUD, scoped per user; 7 onboarding tasks seeded at registration |
-| Discovery | Program search, country/level filters, shortlist, comparison |
-| Documents | Authenticated PDF, Word and image upload/download/delete with local storage |
-| Applications | Authenticated create/list/status/delete workflow, scoped per student |
-| Admin | Dashboard metrics, user list, role changes with a self-demotion guard |
-
-The remaining services are **stubs** that return fixed placeholder values and never touch
-the database — Payments, Recommendations, Reviews,
-Scholarships, and Visa. Each is marked in source with a `STUB:` doc comment:
-
-```powershell
-Select-String -Path src/FutureWings.Infrastructure/Services/*.cs -Pattern "STUB:"
+```text
+Future_Wings/
+├── ClientApp/                    # React 19 Single Page Application
+│   ├── src/
+│   │   ├── components/           # Reusable UI widgets, modals & dashboard cards
+│   │   ├── pages/                # Route-level views (Applications, Discovery, Profile, etc.)
+│   │   ├── workers/              # Background inference workers (MediaPipe & Transformers)
+│   │   ├── auth.js               # Token storage & 401 session interceptor
+│   │   └── App.jsx               # Navigation router & app shell
+│   └── vite.config.js            # Rollup chunk splitting & API proxying
+│
+├── src/
+│   ├── FutureWings.Domain/       # Pure domain models (Application, Program, University, User, etc.)
+│   ├── FutureWings.Application/  # DTOs and service interfaces (Clean Architecture contracts)
+│   ├── FutureWings.Infrastructure/ # EF Core DbContext, migrations, seeders & service implementations
+│   └── FutureWings.Web/          # ASP.NET Core API controllers, JWT authentication & SignalR hubs
+│
+└── tests/
+    └── FutureWings.Tests/        # In-Memory & security unit test suites
 ```
 
-Their frontend counterparts render a placeholder card. Do not build on their return values.
+Dependencies strictly adhere to Clean Architecture:
+$$\text{Domain} \longleftarrow \text{Application} \longleftarrow \text{Infrastructure} \longleftarrow \text{Web}$$
 
-## Known issues
+---
 
-- **Unauthenticated user-scoped endpoints.** `Payment` and `Review`
-  controllers take a user id from the route,
-  query, or body and have no `[Authorize]` attribute. They are only harmless today
-  because the services behind them are stubs; each needs an auth attribute and a
-  claims-based owner check before its service is implemented.
-- **No 401 handling in the frontend.** JWTs last one hour. When one expires the SPA
-  keeps rendering, every request fails, and the session is not cleared — the user has to
-  log out manually. `apiRequest` in `ClientApp/src/auth.js` needs to clear the session
-  and redirect on a 401.
-- **No client-side routing.** Navigation is React state, so there is no deep linking, no
-  browser back/forward, and a refresh always returns to the dashboard.
+## 📊 Feature Status Matrix
+
+| Module | Status | Highlights |
+| :--- | :---: | :--- |
+| **Authentication & Security** | ✅ Complete | JWT tokens, BCrypt hashing, role-based claims, auto 401 interceptor |
+| **Applications Tracker** | ✅ Complete | Full lifecycle management, stage filters, Discovery catalog integration |
+| **Deadlines & Planner** | ✅ Complete | Interactive task manager, completion toggling, 7 onboarding seed tasks |
+| **Discovery Catalog** | ✅ Complete | Global university search, country/degree filters, shortlist bookmarks |
+| **Document Vault** | ✅ Complete | Authenticated file storage (PDF, Word, images) with size & type guards |
+| **Recommendation Engine** | ✅ Complete | Multi-factor matching engine based on GPA, budget, and major alignment |
+| **Student Profile & Roadmap** | ✅ Complete | Academic details, ReactFlow curriculum graph, step progress calculation |
+| **AI Mock Interview** | ✅ Complete | MediaPipe camera framing checks & speech answer scoring |
+| **Subscriptions & Billing** | ✅ Complete | Tier entitlements, simulated checkout & Stripe webhook verification |
+| **Admin Operations** | ✅ Complete | User management, role elevation & demotion guards, platform telemetry |
+| **Community & Reviews** | ⏳ In Progress | University review ratings and feedback |
+| **Scholarships Directory** | ⏳ In Progress | International funding search and deadline link |
+| **Visa Risk Assessment** | ⏳ In Progress | Risk evaluation checklist and country readiness score |
+
+---
+
+## 🔒 Security Hardening
+
+- **User-Scoped Security**: All student endpoints strictly extract the user ID from authenticated JWT claims (`ClaimTypes.NameIdentifier`) — route parameters are never trusted for user identity.
+- **Session Auto-Recovery**: The frontend interceptor detects expired tokens (`401 Unauthorized`), purges cached storage, and cleanly redirects users to sign in.
+- **File Upload Safeguards**: Multi-part document uploads enforce a strict 10 MB limit and allow only whitelisted MIME types (`PDF`, `DOCX`, `JPEG`, `PNG`).
