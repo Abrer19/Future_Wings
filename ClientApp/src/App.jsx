@@ -3,6 +3,7 @@ import { apiRequest, clearSession, loadSession, saveSession } from './auth.js'
 import LockedFeature from './components/ui/LockedFeature.jsx'
 import NavIcon from './components/ui/navIcons.jsx'
 import Admin from './pages/Admin.jsx'
+import AgentPanel from './pages/AgentPanel.jsx'
 import AiInterview from './pages/AiInterview.jsx'
 import Applications from './pages/Applications.jsx'
 import Community from './pages/Community.jsx'
@@ -32,6 +33,7 @@ const pages = {
   Community,
   'AI Interview': AiInterview,
   Plans: Subscription,
+  'Agent Panel': AgentPanel,
   Admin,
   Login,
   Register,
@@ -46,7 +48,7 @@ const NAV_GROUPS = [
   { label: 'Overview', items: ['Dashboard', 'Roadmap'] },
   { label: 'Explore', items: ['Discovery', 'Recommendations', 'Scholarships', 'Community'] },
   { label: 'Apply', items: ['Applications', 'Documents', 'Visa Check', 'AI Interview'] },
-  { label: 'Account', items: ['Profile', 'Plans', 'Admin'] },
+  { label: 'Account', items: ['Profile', 'Plans', 'Agent Panel', 'Admin'] },
 ]
 
 // Which paid feature each page needs. Pages absent from this map are always available.
@@ -153,7 +155,11 @@ function App() {
   const visibleGroups = NAV_GROUPS
     .map((group) => ({
       ...group,
-      items: group.items.filter((page) => page !== 'Admin' || session.role === 'Admin'),
+      items: group.items.filter((page) => {
+        if (page === 'Admin') return session.role === 'Admin'
+        if (page === 'Agent Panel') return session.role === 'Agent' || session.role === 'Admin'
+        return true
+      }),
     }))
     .filter((group) => group.items.length > 0)
 

@@ -35,5 +35,32 @@ public class AdminController(IAdminService adminService) : ControllerBase
         }
     }
 
+    [HttpPatch("users/{userId:int}/tier")]
+    public async Task<IActionResult> SetUserTier(int userId, TierRequest request)
+    {
+        try
+        {
+            var user = await adminService.SetUserSubscriptionTierAsync(userId, request.Tier);
+            return user is null ? NotFound() : Ok(user);
+        }
+        catch (ArgumentException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+    }
+
+    [HttpGet("applications")]
+    public async Task<IActionResult> GetApplications() => Ok(await adminService.GetAllApplicationsAsync());
+
+    [HttpPatch("applications/{applicationId:int}/status")]
+    public async Task<IActionResult> UpdateApplicationStatus(int applicationId, ApplicationStatusRequest request)
+    {
+        var updated = await adminService.UpdateApplicationStatusAsync(applicationId, request.Status);
+        return updated ? Ok(new { success = true }) : NotFound(new { message = "Application or status not found." });
+    }
+
     public sealed record RoleRequest(string Role);
+    public sealed record TierRequest(string Tier);
+    public sealed record ApplicationStatusRequest(string Status);
 }
+

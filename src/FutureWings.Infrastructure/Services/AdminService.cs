@@ -14,14 +14,18 @@ public sealed class AdminService(FutureWingsDbContext context) : IAdminService
         {
             TotalUsers = await context.Users.CountAsync(),
             AdminUsers = await context.Users.CountAsync(user => user.Role == "Admin"),
+            AgentUsers = await context.Users.CountAsync(user => user.Role == "Agent"),
             TotalApplications = await context.Applications.CountAsync(),
+            TotalUniversities = await context.Universities.CountAsync(),
+            TotalPrograms = await context.Programs.CountAsync(),
+            TotalCountries = await context.Countries.CountAsync(),
             ActiveDeadlines = await context.Deadlines.CountAsync(deadline => deadline.CompletedAt == null),
             OverdueDeadlines = await context.Deadlines.CountAsync(deadline => deadline.CompletedAt == null && deadline.DueAt < now),
             CompletedDeadlines = await context.Deadlines.CountAsync(deadline => deadline.CompletedAt != null),
             RecentApplications = await context.Applications
                 .AsNoTracking()
                 .OrderByDescending(application => application.SubmittedAt)
-                .Take(8)
+                .Take(10)
                 .Select(application => new AdminApplicationDto
                 {
                     Id = application.Id,
@@ -61,6 +65,9 @@ public sealed class AdminService(FutureWingsDbContext context) : IAdminService
                 FirstName = user.Profile != null ? user.Profile.FirstName : string.Empty,
                 LastName = user.Profile != null ? user.Profile.LastName : string.Empty,
                 Role = user.Role,
+                SubscriptionTier = user.SubscriptionTier,
+                Major = user.Profile != null ? user.Profile.Major : null,
+                Cgpa = user.Profile != null ? user.Profile.Cgpa : null,
                 ApplicationCount = user.Applications.Count,
                 DeadlineCount = user.Deadlines.Count
             })
@@ -69,9 +76,9 @@ public sealed class AdminService(FutureWingsDbContext context) : IAdminService
     public async Task<AdminUserDto?> SetUserRoleAsync(int actorUserId, int userId, string role)
     {
         var normalizedRole = role.Trim();
-        if (normalizedRole is not ("Admin" or "Student"))
+        if (normalizedRole is not ("Admin" or "Agent" or "Student"))
         {
-            throw new ArgumentException("Role must be Admin or Student.");
+            throw new ArgumentException("Role must be Admin, Agent, or Student.");
         }
 
         if (actorUserId == userId && normalizedRole != "Admin")
@@ -84,6 +91,56 @@ public sealed class AdminService(FutureWingsDbContext context) : IAdminService
 
         user.Role = normalizedRole;
         await context.SaveChangesAsync();
+        return await MapToDtoAsync(userId);
+    }
+
+    public async Task<AdminUserDto?> SetUserSubscriptionTierAsync(int userId, string tier)
+    {
+        var normalizedTier = tier.Trim();
+        if (normalizedTier is not ("Free" or "Pro" or "Premium"))
+        {
+            throw new ArgumentException("Tier must be Free, Pro, or Premium.");
+        }
+
+        var user = await context.Users.SingleOrDefaultAsync(candidate => candidate.Id == userId);
+        if (user is null) return null;
+
+        user.SubscriptionTier = normalizedTier;
+        user.SubscriptionRenewsAt = normalizedTier == "Free" ? null : DateTimeOffset.UtcNow.AddMonths(1);
+        await context.SaveChangesAsync();
+        return await MapToDtoAsync(userId);
+    }
+
+    public async Task<IReadOnlyList<AdminApplicationDto>> GetAllApplicationsAsync() =>
+        await context.Applications
+            .AsNoTracking()
+            .OrderByDescending(a => a.SubmittedAt)
+            .Select(a => new AdminApplicationDto
+            {
+                Id = a.Id,
+                StudentEmail = a.User.Email,
+                Program = a.Program.Name,
+                University = a.Program.University.Name,
+                Status = a.State.Name,
+                SubmittedAt = a.SubmittedAt
+            })
+            .ToListAsync();
+
+    public async Task<bool> UpdateApplicationStatusAsync(int applicationId, string status)
+    {
+        var app = await context.Applications.SingleOrDefaultAsync(a => a.Id == applicationId);
+        if (app is null) return false;
+
+        var state = await context.ApplicationStates.SingleOrDefaultAsync(s => s.Name.ToLower() == status.Trim().ToLower());
+        if (state is null) return false;
+
+        app.ApplicationStateId = state.Id;
+        await context.SaveChangesAsync();
+        return true;
+    }
+
+    private async Task<AdminUserDto> MapToDtoAsync(int userId)
+    {
         return await context.Users
             .AsNoTracking()
             .Where(candidate => candidate.Id == userId)
@@ -94,9 +151,13 @@ public sealed class AdminService(FutureWingsDbContext context) : IAdminService
                 FirstName = candidate.Profile != null ? candidate.Profile.FirstName : string.Empty,
                 LastName = candidate.Profile != null ? candidate.Profile.LastName : string.Empty,
                 Role = candidate.Role,
+                SubscriptionTier = candidate.SubscriptionTier,
+                Major = candidate.Profile != null ? candidate.Profile.Major : null,
+                Cgpa = candidate.Profile != null ? candidate.Profile.Cgpa : null,
                 ApplicationCount = candidate.Applications.Count,
                 DeadlineCount = candidate.Deadlines.Count
             })
             .SingleAsync();
     }
 }
+

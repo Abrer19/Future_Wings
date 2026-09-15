@@ -9,6 +9,61 @@ public static class DemoUserSeeder
 {
     public static async Task SeedAsync(FutureWingsDbContext context)
     {
+        // Seed Admin User
+        var adminUser = await context.Users.FirstOrDefaultAsync(u => u.Email == "admin@futurewings.io");
+        if (adminUser is null)
+        {
+            var adminHash = BCrypt.Net.BCrypt.HashPassword("Password123!");
+            adminUser = new User
+            {
+                Email = "admin@futurewings.io",
+                PasswordHash = adminHash,
+                Role = "Admin",
+                SubscriptionTier = "Premium",
+                SubscriptionRenewsAt = DateTimeOffset.UtcNow.AddYears(1),
+                Profile = new UserProfile
+                {
+                    FirstName = "Sarah",
+                    LastName = "Jenkins",
+                    Major = "Higher Education Administration",
+                    DegreeLevel = "Doctorate"
+                }
+            };
+            context.Users.Add(adminUser);
+        }
+        else
+        {
+            adminUser.Role = "Admin";
+        }
+
+        // Seed Country Agent User
+        var agentUser = await context.Users.FirstOrDefaultAsync(u => u.Email == "agent@futurewings.io");
+        if (agentUser is null)
+        {
+            var agentHash = BCrypt.Net.BCrypt.HashPassword("Password123!");
+            agentUser = new User
+            {
+                Email = "agent@futurewings.io",
+                PasswordHash = agentHash,
+                Role = "Agent",
+                SubscriptionTier = "Pro",
+                SubscriptionRenewsAt = DateTimeOffset.UtcNow.AddYears(1),
+                Profile = new UserProfile
+                {
+                    FirstName = "Marcus",
+                    LastName = "Vance",
+                    Major = "International Student Admissions",
+                    DegreeLevel = "Master's"
+                }
+            };
+            context.Users.Add(agentUser);
+        }
+        else
+        {
+            agentUser.Role = "Agent";
+        }
+        await context.SaveChangesAsync();
+
         const string demoEmail = "demo@futurewings.io";
         var demoUser = await context.Users
             .Include(u => u.Profile)

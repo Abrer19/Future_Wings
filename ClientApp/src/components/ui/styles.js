@@ -25,6 +25,8 @@ export const CARD = `rounded-2xl border border-secondary-200/70 bg-white ${SHADO
 export const CONTROL =
   'rounded-lg border border-secondary-200 bg-white px-3 py-2.5 text-sm text-secondary-950 outline-none transition placeholder:text-secondary-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20'
 
+export const INPUT = CONTROL
+
 export const FOCUS =
   'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2'
 

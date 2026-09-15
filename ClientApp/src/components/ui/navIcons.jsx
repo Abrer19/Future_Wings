@@ -55,6 +55,9 @@ const icons = {
   Plans: () => (
     <Icon><path d="M3.5 8.5h17M3.5 8.5 6 4.5h12l2.5 4M3.5 8.5v11a1.5 1.5 0 0 0 1.5 1.5h14a1.5 1.5 0 0 0 1.5-1.5v-11" /><path d="M9.5 12a2.5 2.5 0 0 0 5 0" /></Icon>
   ),
+  'Agent Panel': () => (
+    <Icon><rect height="13" rx="2" width="18" x="3" y="6" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18M12 11v4" /></Icon>
+  ),
   Admin: () => (
     <Icon><path d="M12 3.4 4.5 6.6v5c0 4.4 3.1 8.4 7.5 9.4 4.4-1 7.5-5 7.5-9.4v-5z" /><path d="M12 9.5v3M12 15.4h.01" /></Icon>
   ),
