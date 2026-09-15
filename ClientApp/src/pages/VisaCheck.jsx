@@ -38,6 +38,7 @@ export default function VisaCheck({ session }) {
   const [applications, setApplications] = useState([])
   const [programs, setPrograms] = useState([])
   const [result, setResult] = useState(null)
+  const [reportSource, setReportSource] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
@@ -81,7 +82,7 @@ export default function VisaCheck({ session }) {
     setLoading(true); setError('')
     try {
       const report = await apiRequest(`/visa/application/${form.applicationId}/risk`, { token: session.token })
-      setResult(report); setToast('Application readiness report loaded')
+      setResult(report); setReportSource('saved'); setToast('Application readiness report loaded')
     } catch (requestError) { setError(requestError.message) } finally { setLoading(false) }
   }
 
@@ -102,7 +103,7 @@ export default function VisaCheck({ session }) {
       const report = await apiRequest('/visa/evaluate', {
         token: session.token, method: 'POST', body: JSON.stringify(payload),
       })
-      setResult(report); setToast('Assessment ready')
+      setResult(report); setReportSource('manual'); setToast('Assessment ready')
     } catch (requestError) { setError(requestError.message) } finally { setLoading(false) }
   }
 
@@ -165,6 +166,7 @@ export default function VisaCheck({ session }) {
           {!loading && result && <>
             <div><div className="flex items-end justify-between"><span className={`text-2xl font-bold ${currentMeter.text}`}>{currentMeter.label} risk</span><span className="text-sm font-semibold text-secondary-700">{result.riskScore}/100</span></div><div aria-label={`Risk score ${result.riskScore} of 100`} className="mt-3 h-3 overflow-hidden rounded-full bg-secondary-100" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={result.riskScore}><div className={`h-full rounded-full transition-all duration-700 ${currentMeter.color}`} style={{ width: `${result.riskScore}%` }} /></div></div>
             <div><h3 className="font-semibold text-secondary-950">Key risk factors</h3><ul className="mt-3 space-y-3">{result.reasons.map((reason) => <li className="flex gap-2 text-sm text-secondary-700" key={reason}><span aria-hidden="true" className={reason.startsWith('Check destination') ? 'text-success-600' : 'text-warning-600'}>{reason.startsWith('Check destination') ? '✓' : '⚠'}</span><span>{reason}</span></li>)}</ul></div>
+            {reportSource === 'manual' && (form.hasFundingProof || form.hasLanguageScore) && <div><h3 className="font-semibold text-secondary-950">Evidence supplied</h3><ul className="mt-3 space-y-2 text-sm text-secondary-700">{form.hasFundingProof && <li><span aria-hidden="true" className="mr-2 text-success-600">✓</span>Funding proof available</li>}{form.hasLanguageScore && <li><span aria-hidden="true" className="mr-2 text-success-600">✓</span>Language test evidence available</li>}</ul></div>}
             <div><h3 className="font-semibold text-secondary-950">Your next steps</h3><ul className="mt-3 space-y-3">{result.recommendations.map((item) => <li className="flex gap-2 text-sm text-secondary-700" key={item}><span aria-hidden="true" className="text-success-600">✓</span><span>{item}</span></li>)}</ul></div>
           </>}
         </section>
