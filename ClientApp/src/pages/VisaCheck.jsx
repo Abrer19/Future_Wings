@@ -60,7 +60,8 @@ export default function VisaCheck({ session }) {
   }, [toast])
 
   const update = (key, value) => {
-    setForm((current) => ({ ...current, [key]: value }))
+    setForm((current) => ({ ...current, [key]: value,
+      ...(key === 'hasLanguageScore' && !value ? { ieltsOverallScore: '' } : {}) }))
     setResult(null)
     setError('')
   }
