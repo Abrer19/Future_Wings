@@ -37,7 +37,7 @@ const studentPages = {
 
 const ROLE_NAV_GROUPS = {
   Admin: [
-    { label: 'Platform Governance', items: ['Dashboard', 'User Management', 'Applications Oversight', 'Country Agents'] },
+    { label: 'Platform Governance', items: ['Dashboard', 'User Management', 'Applications Oversight'] },
     { label: 'Academic Oversight', items: ['Academic Catalog', 'Scholarships Manager'] },
   ],
   Agent: [
@@ -111,7 +111,7 @@ function App() {
     if (!session) return
     if ((activePage === 'User Management' || activePage === 'Applications Oversight' || activePage === 'Academic Catalog' || activePage === 'Scholarships Manager') && session.role !== 'Admin') {
       setActivePage(getDefaultPage(session.role))
-    } else if (activePage === 'Country Agents' && session.role !== 'Admin' && session.role !== 'Agent') {
+    } else if (activePage === 'Agent Panel' && session.role !== 'Agent') {
       setActivePage(getDefaultPage(session.role))
     }
   }, [activePage, session])
@@ -177,9 +177,6 @@ function App() {
   // Resolve component dynamically per role
   const renderActiveContent = () => {
     if (session.role === 'Admin') {
-      if (activePage === 'Country Agents') {
-        return <AgentPanel onNavigate={goTo} session={session} />
-      }
       if (activePage === 'Dashboard') {
         return <Admin initialTab="Overview" onNavigate={goTo} session={session} />
       }
