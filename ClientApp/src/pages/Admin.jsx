@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { apiRequest } from '../auth.js'
 import Toast from '../components/ui/Toast.jsx'
 import { BTN_PRIMARY, CARD, FOCUS } from '../components/ui/styles.js'
+import { RevenueAreaChart, RevenueDonutChart, SubscribersBarChart } from '../components/admin/RevenueCharts.jsx'
 
 const STATUS_BADGES = {
   Draft: 'bg-secondary-100 text-secondary-700',
@@ -112,7 +113,6 @@ export default function Admin({ session, initialTab = 'Overview' }) {
       })
       setUsers((current) => current.map((item) => (item.id === updated.id ? updated : item)))
       setToast(`Updated subscription tier for ${user.email} to ${tier}.`)
-      // Refresh revenue stats
       const refreshedRev = await apiRequest('/admin/revenue', { token: session.token }).catch(() => null)
       if (refreshedRev) setRevenue(refreshedRev)
     } catch (requestError) {
@@ -200,7 +200,7 @@ export default function Admin({ session, initialTab = 'Overview' }) {
             Administration Dashboard
           </h1>
           <p className="mt-1 text-sm text-secondary-600">
-            Manage platform accounts, subscriptions & revenue, student admissions, and academic programs.
+            Manage platform accounts, subscriptions & revenue graphs, student admissions, and academic programs.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -256,7 +256,7 @@ export default function Admin({ session, initialTab = 'Overview' }) {
             <div className="mt-8 flex flex-wrap gap-2 border-b border-secondary-200">
               {[
                 { id: 'Overview', label: 'Platform Overview' },
-                { id: 'Revenue & Finance', label: 'Revenue & Billing' },
+                { id: 'Revenue & Finance', label: 'Revenue & Charts' },
                 { id: 'User Management', label: 'User Directory & Roles' },
                 { id: 'Applications Oversight', label: 'Applications Queue' },
                 { id: 'Academic Catalog', label: 'University Programs' },
@@ -362,7 +362,7 @@ export default function Admin({ session, initialTab = 'Overview' }) {
               </div>
             )}
 
-            {/* TAB: Revenue & Finance */}
+            {/* TAB: Revenue & Finance with Visual Charts */}
             {tab === 'Revenue & Finance' && revenue && (
               <section className="mt-6 space-y-6">
                 {/* Financial KPIs */}
@@ -399,99 +399,80 @@ export default function Admin({ session, initialTab = 'Overview' }) {
                   </div>
                 </div>
 
-                {/* Plan Distribution & Pricing Model */}
-                <div className="grid gap-6 lg:grid-cols-3">
-                  <div className="rounded-2xl border border-secondary-200 bg-white p-6 shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="rounded-lg bg-secondary-100 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-secondary-700">
-                        Free Tier
-                      </span>
-                      <span className="text-lg font-extrabold text-secondary-900">$0/mo</span>
-                    </div>
-                    <p className="mt-3 text-3xl font-black text-secondary-900">{revenue.freeTierCount} <span className="text-xs font-normal text-secondary-500">users</span></p>
-                    <p className="mt-1 text-xs text-secondary-500">Basic discovery & program search</p>
-                    <div className="mt-4 h-2 w-full rounded-full bg-secondary-100 overflow-hidden">
-                      <div
-                        className="h-full bg-secondary-400 rounded-full"
-                        style={{ width: `${revenue.totalUsers > 0 ? (revenue.freeTierCount / revenue.totalUsers) * 100 : 0}%` }}
-                      />
-                    </div>
+                {/* GRAPH & CHART ROW 1: Area Trend Curve + Donut Breakdown */}
+                <div className="grid gap-6 xl:grid-cols-3">
+                  <div className="xl:col-span-2">
+                    <RevenueAreaChart data={revenue.monthlyBreakdown} />
                   </div>
-
-                  <div className="rounded-2xl border border-primary-200 bg-primary-50/30 p-6 shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="rounded-lg bg-primary-100 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-primary-700">
-                        Pro Tier
-                      </span>
-                      <span className="text-lg font-extrabold text-primary-700">$19/mo</span>
-                    </div>
-                    <p className="mt-3 text-3xl font-black text-primary-900">{revenue.proTierCount} <span className="text-xs font-normal text-secondary-500">subscribers</span></p>
-                    <p className="mt-1 text-xs text-secondary-600">
-                      Contributing <span className="font-bold text-primary-700">${(revenue.proTierCount * 19).toLocaleString()} USD</span> monthly
-                    </p>
-                    <div className="mt-4 h-2 w-full rounded-full bg-primary-100 overflow-hidden">
-                      <div
-                        className="h-full bg-primary-600 rounded-full"
-                        style={{ width: `${revenue.totalUsers > 0 ? (revenue.proTierCount / revenue.totalUsers) * 100 : 0}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-purple-200 bg-purple-50/30 p-6 shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="rounded-lg bg-purple-100 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-purple-700">
-                        Premium Tier
-                      </span>
-                      <span className="text-lg font-extrabold text-purple-700">$49/mo</span>
-                    </div>
-                    <p className="mt-3 text-3xl font-black text-purple-950">{revenue.premiumTierCount} <span className="text-xs font-normal text-secondary-500">subscribers</span></p>
-                    <p className="mt-1 text-xs text-secondary-600">
-                      Contributing <span className="font-bold text-purple-700">${(revenue.premiumTierCount * 49).toLocaleString()} USD</span> monthly
-                    </p>
-                    <div className="mt-4 h-2 w-full rounded-full bg-purple-100 overflow-hidden">
-                      <div
-                        className="h-full bg-purple-600 rounded-full"
-                        style={{ width: `${revenue.totalUsers > 0 ? (revenue.premiumTierCount / revenue.totalUsers) * 100 : 0}%` }}
-                      />
-                    </div>
+                  <div>
+                    <RevenueDonutChart
+                      proCount={revenue.proTierCount}
+                      premiumCount={revenue.premiumTierCount}
+                      freeCount={revenue.freeTierCount}
+                    />
                   </div>
                 </div>
 
-                {/* 6-Month Rolling Revenue Growth Table */}
-                <div className="rounded-2xl border border-secondary-200 bg-white shadow-sm overflow-hidden">
-                  <div className="border-b border-secondary-200 px-6 py-4 flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-secondary-900 uppercase tracking-wider">
-                      Rolling 6-Month SaaS Growth & Gross Volume
-                    </h3>
-                    <span className="text-xs font-medium text-secondary-500">Currency: USD</span>
+                {/* GRAPH & CHART ROW 2: Bar Chart + Plan Cards */}
+                <div className="grid gap-6 xl:grid-cols-3">
+                  <div>
+                    <SubscribersBarChart data={revenue.monthlyBreakdown} />
                   </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                      <thead className="bg-secondary-50 text-[11px] font-bold uppercase tracking-wider text-secondary-500">
-                        <tr>
-                          <th className="px-6 py-3.5">Billing Month</th>
-                          <th className="px-6 py-3.5">Estimated Gross Revenue</th>
-                          <th className="px-6 py-3.5">MRR Pace</th>
-                          <th className="px-6 py-3.5">Active Subscribers</th>
-                          <th className="px-6 py-3.5 text-right">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-secondary-100">
-                        {revenue.monthlyBreakdown?.map((m, idx) => (
-                          <tr key={idx} className="hover:bg-secondary-50/50 transition">
-                            <td className="px-6 py-4 font-semibold text-secondary-900">{m.month}</td>
-                            <td className="px-6 py-4 font-mono font-bold text-secondary-900">${m.grossRevenueUsd.toLocaleString()} USD</td>
-                            <td className="px-6 py-4 font-mono text-xs font-semibold text-emerald-600">${m.mrrUsd.toLocaleString()} USD/mo</td>
-                            <td className="px-6 py-4 text-xs font-medium text-secondary-700">{m.subscriberCount} paid members</td>
-                            <td className="px-6 py-4 text-right">
-                              <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200">
-                                Reconciled
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="xl:col-span-2 grid gap-4 sm:grid-cols-3">
+                    <div className="rounded-2xl border border-secondary-200 bg-white p-5 shadow-sm flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span className="rounded-lg bg-secondary-100 px-2 py-0.5 text-xs font-bold uppercase text-secondary-700">Free Tier</span>
+                          <span className="text-base font-extrabold text-secondary-900">$0</span>
+                        </div>
+                        <p className="mt-3 text-2xl font-black text-secondary-900">{revenue.freeTierCount} <span className="text-xs font-normal text-secondary-500">users</span></p>
+                        <p className="mt-1 text-xs text-secondary-500">Discovery search & community</p>
+                      </div>
+                      <div className="mt-4 h-2 w-full rounded-full bg-secondary-100 overflow-hidden">
+                        <div
+                          className="h-full bg-secondary-400 rounded-full"
+                          style={{ width: `${revenue.totalUsers > 0 ? (revenue.freeTierCount / revenue.totalUsers) * 100 : 0}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-primary-200 bg-primary-50/30 p-5 shadow-sm flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span className="rounded-lg bg-primary-100 px-2 py-0.5 text-xs font-bold uppercase text-primary-700">Pro Tier</span>
+                          <span className="text-base font-extrabold text-primary-700">$19/mo</span>
+                        </div>
+                        <p className="mt-3 text-2xl font-black text-primary-900">{revenue.proTierCount} <span className="text-xs font-normal text-secondary-500">subscribers</span></p>
+                        <p className="mt-1 text-xs text-secondary-600">
+                          Yielding <span className="font-bold text-primary-700">${(revenue.proTierCount * 19).toLocaleString()}</span> monthly
+                        </p>
+                      </div>
+                      <div className="mt-4 h-2 w-full rounded-full bg-primary-100 overflow-hidden">
+                        <div
+                          className="h-full bg-primary-600 rounded-full"
+                          style={{ width: `${revenue.totalUsers > 0 ? (revenue.proTierCount / revenue.totalUsers) * 100 : 0}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-purple-200 bg-purple-50/30 p-5 shadow-sm flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span className="rounded-lg bg-purple-100 px-2 py-0.5 text-xs font-bold uppercase text-purple-700">Premium Tier</span>
+                          <span className="text-base font-extrabold text-purple-700">$49/mo</span>
+                        </div>
+                        <p className="mt-3 text-2xl font-black text-purple-950">{revenue.premiumTierCount} <span className="text-xs font-normal text-secondary-500">subscribers</span></p>
+                        <p className="mt-1 text-xs text-secondary-600">
+                          Yielding <span className="font-bold text-purple-700">${(revenue.premiumTierCount * 49).toLocaleString()}</span> monthly
+                        </p>
+                      </div>
+                      <div className="mt-4 h-2 w-full rounded-full bg-purple-100 overflow-hidden">
+                        <div
+                          className="h-full bg-purple-600 rounded-full"
+                          style={{ width: `${revenue.totalUsers > 0 ? (revenue.premiumTierCount / revenue.totalUsers) * 100 : 0}%` }}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
