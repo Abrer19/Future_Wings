@@ -29,18 +29,36 @@ public sealed class ApplicationService(FutureWingsDbContext context) : IApplicat
     }
 
     public async Task<IReadOnlyList<ApplicationDetailsDto>> GetAllAsync(int userId) =>
-        await Query(userId).OrderByDescending(item => item.SubmittedAt).Select(item => new ApplicationDetailsDto
-        {
-            ApplicationId = item.Id, ProgramId = item.ProgramId, ProgramName = item.Program.Name,
-            UniversityName = item.Program.University.Name, Status = item.State.Name, CreatedAt = item.SubmittedAt,
-        }).ToListAsync();
+        await Query(userId)
+            .OrderByDescending(item => item.SubmittedAt)
+            .Select(item => new ApplicationDetailsDto
+            {
+                ApplicationId = item.Id,
+                ProgramId = item.ProgramId,
+                ProgramName = item.Program.Name,
+                UniversityName = item.Program.University.Name,
+                Country = item.Program.University.Country.Name,
+                Level = item.Program.Level,
+                Status = item.State.Name,
+                CreatedAt = item.SubmittedAt,
+            })
+            .ToListAsync();
 
     public async Task<ApplicationDetailsDto> GetAsync(int userId, int applicationId) =>
-        await Query(userId).Where(item => item.Id == applicationId).Select(item => new ApplicationDetailsDto
-        {
-            ApplicationId = item.Id, ProgramId = item.ProgramId, ProgramName = item.Program.Name,
-            UniversityName = item.Program.University.Name, Status = item.State.Name, CreatedAt = item.SubmittedAt,
-        }).SingleOrDefaultAsync() ?? throw new KeyNotFoundException("Application not found.");
+        await Query(userId)
+            .Where(item => item.Id == applicationId)
+            .Select(item => new ApplicationDetailsDto
+            {
+                ApplicationId = item.Id,
+                ProgramId = item.ProgramId,
+                ProgramName = item.Program.Name,
+                UniversityName = item.Program.University.Name,
+                Country = item.Program.University.Country.Name,
+                Level = item.Program.Level,
+                Status = item.State.Name,
+                CreatedAt = item.SubmittedAt,
+            })
+            .SingleOrDefaultAsync() ?? throw new KeyNotFoundException("Application not found.");
 
     public async Task<ApplicationStatusDto> UpdateStatusAsync(int userId, int applicationId, ApplicationStatusUpdateDto request)
     {
@@ -61,7 +79,13 @@ public sealed class ApplicationService(FutureWingsDbContext context) : IApplicat
         await context.SaveChangesAsync();
     }
 
-    private IQueryable<DomainApplication> Query(int userId) => context.Applications.AsNoTracking().Where(item => item.UserId == userId);
+    private IQueryable<DomainApplication> Query(int userId) =>
+        context.Applications
+            .AsNoTracking()
+            .Include(item => item.Program).ThenInclude(p => p.University).ThenInclude(u => u.Country)
+            .Include(item => item.State)
+            .Where(item => item.UserId == userId);
+
     private static ApplicationStatusDto ToStatus(int id, string status, DateTimeOffset updatedAt) =>
         new() { ApplicationId = id, Status = status, UpdatedAt = updatedAt };
 }
