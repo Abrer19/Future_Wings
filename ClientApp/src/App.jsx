@@ -39,17 +39,24 @@ const pages = {
   Register,
 }
 
-/**
- * Navigation grouped by intent rather than one flat list of twelve links.
- * Grouping is what makes a long sidebar scannable, and the labels follow the mental
- * model a student already has: get oriented, look around, apply, manage the account.
- */
-const NAV_GROUPS = [
-  { label: 'Overview', items: ['Dashboard', 'Roadmap'] },
-  { label: 'Explore', items: ['Discovery', 'Recommendations', 'Scholarships', 'Community'] },
-  { label: 'Apply', items: ['Applications', 'Documents', 'Visa Check', 'AI Interview'] },
-  { label: 'Account', items: ['Profile', 'Plans', 'Agent Panel', 'Admin'] },
-]
+const ROLE_NAV_GROUPS = {
+  Admin: [
+    { label: 'Administration', items: ['Admin', 'Agent Panel'] },
+    { label: 'Explore Catalog', items: ['Discovery', 'Scholarships', 'Community'] },
+    { label: 'Account', items: ['Profile', 'Plans'] },
+  ],
+  Agent: [
+    { label: 'Agent Operations', items: ['Agent Panel'] },
+    { label: 'Explore & Assist', items: ['Discovery', 'Scholarships'] },
+    { label: 'Account', items: ['Profile'] },
+  ],
+  Student: [
+    { label: 'Overview', items: ['Dashboard', 'Roadmap'] },
+    { label: 'Explore', items: ['Discovery', 'Recommendations', 'Scholarships', 'Community'] },
+    { label: 'Apply', items: ['Applications', 'Documents', 'Visa Check', 'AI Interview'] },
+    { label: 'Account', items: ['Profile', 'Plans'] },
+  ],
+}
 
 // Which paid feature each page needs. Pages absent from this map are always available.
 // Keys must match the feature keys the server returns from GET /api/subscription/me.
@@ -61,12 +68,27 @@ const PAGE_FEATURE = {
 // Only used for the upgrade prompt's wording.
 const FEATURE_TIER = { roadmap: 'Pro', aiInterview: 'Premium' }
 
+const getDefaultPage = (role) => {
+  if (role === 'Admin') return 'Admin'
+  if (role === 'Agent') return 'Agent Panel'
+  return 'Dashboard'
+}
+
+const getWorkspaceTitle = (role) => {
+  if (role === 'Admin') return 'Admin console'
+  if (role === 'Agent') return 'Country agent portal'
+  return 'Student workspace'
+}
+
 const initials = (session) =>
   `${session.firstName?.[0] ?? ''}${session.lastName?.[0] ?? ''}`.toUpperCase() || 'FW'
 
 function App() {
   const [session, setSession] = useState(loadSession)
-  const [activePage, setActivePage] = useState(session ? 'Dashboard' : 'Home')
+  const [activePage, setActivePage] = useState(() => {
+    const s = loadSession()
+    return s ? getDefaultPage(s.role) : 'Home'
+  })
   const [menuOpen, setMenuOpen] = useState(false)
   const [subscription, setSubscription] = useState(null)
   const menuButtonRef = useRef(null)
@@ -93,6 +115,16 @@ function App() {
     return () => window.removeEventListener('futurewings:unauthorized', handleUnauthorized)
   }, [])
 
+  // Guard against unauthorized page access
+  useEffect(() => {
+    if (!session) return
+    if (activePage === 'Admin' && session.role !== 'Admin') {
+      setActivePage(getDefaultPage(session.role))
+    } else if (activePage === 'Agent Panel' && session.role !== 'Agent' && session.role !== 'Admin') {
+      setActivePage(getDefaultPage(session.role))
+    }
+  }, [activePage, session])
+
   // Below lg the nav is a collapsible drawer; Escape closes it and returns focus to
   // the control that opened it so keyboard users are never stranded inside it.
   useEffect(() => {
@@ -116,7 +148,7 @@ function App() {
   const handleAuthenticated = (nextSession) => {
     saveSession(nextSession)
     setSession(nextSession)
-    setActivePage('Dashboard')
+    setActivePage(getDefaultPage(nextSession.role))
   }
 
   const handleLogout = () => {
@@ -152,16 +184,8 @@ function App() {
     return <AuthPage onAuthenticated={handleAuthenticated} onNavigate={() => setActivePage(activePage === 'Register' ? 'Login' : 'Register')} />
   }
 
-  const visibleGroups = NAV_GROUPS
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((page) => {
-        if (page === 'Admin') return session.role === 'Admin'
-        if (page === 'Agent Panel') return session.role === 'Agent' || session.role === 'Admin'
-        return true
-      }),
-    }))
-    .filter((group) => group.items.length > 0)
+  const role = session.role === 'Admin' || session.role === 'Agent' ? session.role : 'Student'
+  const visibleGroups = ROLE_NAV_GROUPS[role] || ROLE_NAV_GROUPS.Student
 
   return (
     <div className="min-h-screen bg-surface lg:grid lg:grid-cols-[248px_1fr]">
@@ -174,7 +198,7 @@ function App() {
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-500 text-[13px] font-bold text-white">FW</div>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold tracking-tight text-secondary-950">FutureWings</p>
-              <p className="truncate text-[11px] text-secondary-400">Student workspace</p>
+              <p className="truncate text-[11px] font-medium text-primary-600">{getWorkspaceTitle(session.role)}</p>
             </div>
           </div>
           <button
