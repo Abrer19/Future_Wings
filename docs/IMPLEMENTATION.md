@@ -109,7 +109,23 @@ Select-String -Path src/FutureWings.Infrastructure/Services/*.cs -Pattern "STUB:
 ```
 
 Currently: `ApplicationService`, `DocumentService`, `PaymentService`, `ProfileService`,
-`RecommendationService`, `ReviewService`, `ScholarshipService`, `VisaService`.
+`RecommendationService`, `ReviewService`, `ScholarshipService`.
+
+## Visa Check
+
+`POST /api/visa/evaluate` accepts student evidence and returns a 0–100 preparation
+risk score, reasons, and actionable recommendations. `GET
+/api/visa/application/{applicationId}/risk` builds a report from an owned tracked
+application and its program/profile data. Both endpoints require a JWT; the service
+also filters applications by the authenticated user ID. For a tracked application,
+the server uses stored tuition and destination instead of trusting client values.
+
+The report is a deterministic planning heuristic. Living-cost and IELTS values are
+rough benchmarks, not official thresholds or refusal probabilities. Visa evidence
+is not stored in the current schema: a GET report treats funding proof, language
+results, and home-country ties as unknown until the student enters them in the
+interactive assessment. Rechecking official destination and program requirements
+is always part of the checklist.
 
 **Never build on a stub's return value.** They are wired into DI and return `200`, so
 they look functional from the outside.
