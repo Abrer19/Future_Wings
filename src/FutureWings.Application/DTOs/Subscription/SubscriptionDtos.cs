@@ -27,6 +27,16 @@ public class SubscriptionStatusDto
     /// while no real Stripe key is configured.
     /// </summary>
     public bool SimulationEnabled { get; set; }
+
+    /// <summary>
+    /// Stripe publishable key (or demo key) for client-side Stripe Elements integration.
+    /// </summary>
+    public string? PublishableKey { get; set; }
+
+    /// <summary>
+    /// Indicates if the application is operating in Stripe Demo / Test mode.
+    /// </summary>
+    public bool IsDemoMode { get; set; }
 }
 
 public class CheckoutSessionDto

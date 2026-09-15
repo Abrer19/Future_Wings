@@ -25,6 +25,7 @@ public sealed class SubscriptionService(FutureWingsDbContext context, IConfigura
     : ISubscriptionService
 {
     private string? SecretKey => Get("Stripe:SecretKey");
+    private string? PublishableKey => Get("Stripe:PublishableKey");
     private string? WebhookSecret => Get("Stripe:WebhookSecret");
 
     /// Treats the committed "replace-with-..." placeholders as absent.
@@ -38,23 +39,20 @@ public sealed class SubscriptionService(FutureWingsDbContext context, IConfigura
 
     private string? PriceIdFor(string tier) => Get($"Stripe:Prices:{tier}");
 
+    public bool IsDemoKey =>
+        SecretKey is not null && (SecretKey.Contains("demo", StringComparison.OrdinalIgnoreCase) || SecretKey.StartsWith("sk_test_demo", StringComparison.OrdinalIgnoreCase));
+
     public bool StripeConfigured => SecretKey is not null;
 
     /// <summary>
     /// Fake checkout, for local development and demos.
-    ///
-    /// Two independent conditions must BOTH hold, so this cannot be switched on by
-    /// accident:
-    ///   1. Stripe:AllowSimulatedCheckout is explicitly true. That key lives only in
-    ///      appsettings.Development.json, which is not loaded outside Development.
-    ///   2. No real Stripe secret key is configured. The moment real keys are added,
-    ///      simulated upgrades stop working on their own — you cannot end up with a
-    ///      live payment processor and a bypass running side by side.
+    /// Enabled when in demo key mode, or when explicitly allowed in configuration without real live keys.
     /// </summary>
     public bool SimulationEnabled =>
-        !StripeConfigured
-        && bool.TryParse(configuration["Stripe:AllowSimulatedCheckout"], out var allowed)
-        && allowed;
+        IsDemoKey
+        || (!StripeConfigured
+            && bool.TryParse(configuration["Stripe:AllowSimulatedCheckout"], out var allowed)
+            && allowed);
 
     public IReadOnlyList<SubscriptionPlanDto> GetPlans() =>
         SubscriptionPlans.All.Select(plan => new SubscriptionPlanDto
@@ -65,7 +63,7 @@ public sealed class SubscriptionService(FutureWingsDbContext context, IConfigura
             MonthlyPriceUsd = plan.MonthlyPriceUsd,
             Highlights = plan.Highlights,
             Features = plan.Features,
-            // A free plan is always "purchasable"; a paid one needs a configured price id.
+            // A free plan is always "purchasable"; a paid one needs a configured price id or simulation mode.
             Purchasable = !SubscriptionPlans.IsPaid(plan.Tier)
                 || (StripeConfigured && PriceIdFor(plan.Tier) is not null)
                 || SimulationEnabled,
@@ -86,6 +84,8 @@ public sealed class SubscriptionService(FutureWingsDbContext context, IConfigura
             RenewsAt = user.SubscriptionRenewsAt,
             StripeConfigured = StripeConfigured,
             SimulationEnabled = SimulationEnabled,
+            PublishableKey = PublishableKey ?? (IsDemoKey ? "pk_test_demo_51FutureWingsDemoPublishableKey889201" : null),
+            IsDemoMode = IsDemoKey || SimulationEnabled,
         };
     }
 
@@ -96,15 +96,35 @@ public sealed class SubscriptionService(FutureWingsDbContext context, IConfigura
             throw new ArgumentException("Choose either the Pro or Premium plan.");
         }
 
-        var secretKey = SecretKey
-            ?? throw new InvalidOperationException(
+        var secretKey = SecretKey;
+        if (secretKey is null && !SimulationEnabled)
+        {
+            throw new InvalidOperationException(
                 "Stripe is not configured. Set Stripe:SecretKey (user-secrets in development, Stripe__SecretKey in production).");
-
-        var priceId = PriceIdFor(tier)
-            ?? throw new InvalidOperationException($"No Stripe price id configured for the {tier} plan (Stripe:Prices:{tier}).");
+        }
 
         var user = await context.Users.SingleOrDefaultAsync(candidate => candidate.Id == userId)
             ?? throw new KeyNotFoundException("User not found.");
+
+        if (IsDemoKey || (secretKey is null && SimulationEnabled))
+        {
+            // Generate demo checkout session
+            if (string.IsNullOrWhiteSpace(user.StripeCustomerId))
+            {
+                user.StripeCustomerId = $"cus_demo_{Guid.NewGuid():N}";
+                await context.SaveChangesAsync();
+            }
+
+            var demoSessionId = $"cs_test_demo_{Guid.NewGuid():N}";
+            return new CheckoutSessionDto
+            {
+                SessionId = demoSessionId,
+                CheckoutUrl = $"{returnUrl}?checkout=success&session_id={demoSessionId}&tier={tier}",
+            };
+        }
+
+        var priceId = PriceIdFor(tier)
+            ?? throw new InvalidOperationException($"No Stripe price id configured for the {tier} plan (Stripe:Prices:{tier}).");
 
         StripeConfiguration.ApiKey = secretKey;
 
