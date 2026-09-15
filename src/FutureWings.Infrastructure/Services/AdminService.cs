@@ -141,22 +141,26 @@ public sealed class AdminService(FutureWingsDbContext context) : IAdminService
 
     public async Task<AdminRevenueDto> GetRevenueOverviewAsync()
     {
+        const decimal tkRate = 120.00m;
         var totalUsers = await context.Users.CountAsync();
         var freeCount = await context.Users.CountAsync(u => u.SubscriptionTier == "Free" || u.SubscriptionTier == null);
         var proCount = await context.Users.CountAsync(u => u.SubscriptionTier == "Pro");
         var premiumCount = await context.Users.CountAsync(u => u.SubscriptionTier == "Premium");
         var paidSubscribers = proCount + premiumCount;
 
-        var mrr = (proCount * 19.00m) + (premiumCount * 49.00m);
-        var arr = mrr * 12.00m;
+        var mrrUsd = (proCount * 19.00m) + (premiumCount * 49.00m);
+        var arrUsd = mrrUsd * 12.00m;
+        var mrrTk = (proCount * 2280.00m) + (premiumCount * 5880.00m);
+        var arrTk = mrrTk * 12.00m;
 
         var paymentsSum = await context.Payments
             .Where(p => p.Status == "Succeeded")
             .SumAsync(p => (decimal?)p.Amount) ?? 0m;
 
-        // Lifetime total revenue (recorded payments + MRR annualized or active seats)
-        var totalGrossRevenue = paymentsSum > 0 ? paymentsSum : (mrr * 6.5m);
-        var arpu = totalUsers > 0 ? Math.Round(mrr / totalUsers, 2) : 0m;
+        var totalGrossRevenueUsd = paymentsSum > 0 ? paymentsSum : (mrrUsd * 6.5m);
+        var totalGrossRevenueTk = totalGrossRevenueUsd * tkRate;
+        var arpuUsd = totalUsers > 0 ? Math.Round(mrrUsd / totalUsers, 2) : 0m;
+        var arpuTk = totalUsers > 0 ? Math.Round(mrrTk / totalUsers, 2) : 0m;
 
         var transactions = await context.Payments
             .AsNoTracking()
@@ -167,7 +171,8 @@ public sealed class AdminService(FutureWingsDbContext context) : IAdminService
                 Id = p.Id,
                 StudentEmail = p.User.Email,
                 Amount = p.Amount,
-                Currency = p.Currency.ToUpper(),
+                AmountTk = p.Amount * tkRate,
+                Currency = "Tk",
                 Status = p.Status,
                 Tier = p.User.SubscriptionTier ?? "Pro",
                 Reference = p.Reference ?? "txn_stripe_demo",
@@ -181,22 +186,30 @@ public sealed class AdminService(FutureWingsDbContext context) : IAdminService
         {
             var targetMonth = now.AddMonths(-i);
             var monthName = targetMonth.ToString("MMM yyyy");
-            var monthFactor = 0.5m + ((5 - i) * 0.1m); // simulated historical growth curve
+            var monthFactor = 0.5m + ((5 - i) * 0.1m);
             monthlyBreakdown.Add(new MonthlyRevenueDto
             {
                 Month = monthName,
-                GrossRevenueUsd = Math.Round(mrr * monthFactor, 2),
-                MrrUsd = Math.Round(mrr * (0.6m + ((5 - i) * 0.08m)), 2),
+                GrossRevenueTk = Math.Round(mrrTk * monthFactor, 2),
+                MrrTk = Math.Round(mrrTk * (0.6m + ((5 - i) * 0.08m)), 2),
+                GrossRevenueUsd = Math.Round(mrrUsd * monthFactor, 2),
+                MrrUsd = Math.Round(mrrUsd * (0.6m + ((5 - i) * 0.08m)), 2),
                 SubscriberCount = Math.Max(1, (int)(paidSubscribers * (0.6m + ((5 - i) * 0.08m))))
             });
         }
 
         return new AdminRevenueDto
         {
-            TotalGrossRevenueUsd = totalGrossRevenue,
-            MonthlyRecurringRevenueUsd = mrr,
-            AnnualRunRateUsd = arr,
-            AverageRevenuePerUserUsd = arpu,
+            Currency = "Tk (BDT)",
+            CurrencySymbol = "৳",
+            TotalGrossRevenueTk = totalGrossRevenueTk,
+            MonthlyRecurringRevenueTk = mrrTk,
+            AnnualRunRateTk = arrTk,
+            AverageRevenuePerUserTk = arpuTk,
+            TotalGrossRevenueUsd = totalGrossRevenueUsd,
+            MonthlyRecurringRevenueUsd = mrrUsd,
+            AnnualRunRateUsd = arrUsd,
+            AverageRevenuePerUserUsd = arpuUsd,
             ActivePaidSubscribers = paidSubscribers,
             TotalUsers = totalUsers,
             FreeTierCount = freeCount,

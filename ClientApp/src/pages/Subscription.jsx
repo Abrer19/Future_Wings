@@ -44,7 +44,7 @@ function StripeDemoModal({ isOpen, onClose, plan, onConfirm, busy, publishableKe
             <p className="text-xs text-indigo-300 font-medium">Subscribe to FutureWings</p>
             <div className="mt-1 flex items-baseline justify-between">
               <h3 className="text-2xl font-bold">{plan.name} Tier</h3>
-              <span className="text-2xl font-extrabold text-white">${plan.monthlyPriceUsd}<span className="text-sm font-normal text-indigo-200">/mo</span></span>
+              <span className="text-2xl font-extrabold text-white">৳{(plan.monthlyPriceUsd * 120).toLocaleString()} Tk<span className="text-sm font-normal text-indigo-200"> (${plan.monthlyPriceUsd} USD/mo)</span></span>
             </div>
           </div>
         </div>
@@ -333,10 +333,17 @@ export default function Subscription({ session, subscription, onSubscriptionChan
                   )}
                 </div>
                 <p className="mt-1 text-sm text-secondary-500">{plan.description}</p>
-                <p className="mt-4 text-3xl font-bold text-secondary-950">
-                  ${plan.monthlyPriceUsd}
-                  <span className="text-sm font-medium text-secondary-500">/month</span>
-                </p>
+                <div className="mt-4">
+                  <p className="text-3xl font-black text-secondary-950">
+                    ৳{plan.monthlyPriceUsd === 0 ? '0' : (plan.monthlyPriceUsd * 120).toLocaleString()} Tk
+                    <span className="text-sm font-medium text-secondary-500"> / month</span>
+                  </p>
+                  {plan.monthlyPriceUsd > 0 && (
+                    <p className="text-xs font-semibold text-secondary-400 mt-0.5">
+                      (${plan.monthlyPriceUsd} USD)
+                    </p>
+                  )}
+                </div>
 
                 <ul className="mt-5 flex-1 space-y-2.5">
                   {plan.highlights.map((highlight) => (

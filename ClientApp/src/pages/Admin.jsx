@@ -200,7 +200,7 @@ export default function Admin({ session, initialTab = 'Overview' }) {
             Administration Dashboard
           </h1>
           <p className="mt-1 text-sm text-secondary-600">
-            Manage platform accounts, subscriptions & revenue graphs, student admissions, and academic programs.
+            Manage platform accounts, subscriptions & revenue (Tk), student admissions, and academic programs.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -227,7 +227,7 @@ export default function Admin({ session, initialTab = 'Overview' }) {
       ) : (
         dashboard && (
           <>
-            {/* KPI Metric Cards */}
+            {/* KPI Metric Cards in Tk */}
             <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Metric
                 label="Total Registered Users"
@@ -236,8 +236,8 @@ export default function Admin({ session, initialTab = 'Overview' }) {
               />
               <Metric
                 label="Monthly Recurring (MRR)"
-                value={`$${revenue?.monthlyRecurringRevenueUsd ? revenue.monthlyRecurringRevenueUsd.toLocaleString() : '0'}`}
-                detail={`ARR: $${revenue?.annualRunRateUsd ? revenue.annualRunRateUsd.toLocaleString() : '0'}`}
+                value={`৳${revenue?.monthlyRecurringRevenueTk ? revenue.monthlyRecurringRevenueTk.toLocaleString() : '0'} Tk`}
+                detail={`ARR: ৳${revenue?.annualRunRateTk ? revenue.annualRunRateTk.toLocaleString() : '0'} Tk/yr`}
               />
               <Metric
                 label="Institutions & Programs"
@@ -256,7 +256,7 @@ export default function Admin({ session, initialTab = 'Overview' }) {
             <div className="mt-8 flex flex-wrap gap-2 border-b border-secondary-200">
               {[
                 { id: 'Overview', label: 'Platform Overview' },
-                { id: 'Revenue & Finance', label: 'Revenue & Charts' },
+                { id: 'Revenue & Finance', label: 'Revenue & Charts (Tk)' },
                 { id: 'User Management', label: 'User Directory & Roles' },
                 { id: 'Applications Oversight', label: 'Applications Queue' },
                 { id: 'Academic Catalog', label: 'University Programs' },
@@ -353,31 +353,31 @@ export default function Admin({ session, initialTab = 'Overview' }) {
                     <div className="rounded-xl border border-secondary-100 bg-secondary-50/50 p-4">
                       <p className="text-xs font-medium text-secondary-500">Stripe Billing Gateway</p>
                       <p className="mt-1 text-sm font-bold text-primary-600 flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full bg-primary-500 inline-block" /> Demo Key Configured
+                        <span className="h-2 w-2 rounded-full bg-primary-500 inline-block" /> Demo Key Configured (Tk / BDT)
                       </p>
-                      <p className="mt-1 text-xs text-secondary-400">Free, Pro ($19/mo), Premium ($49/mo)</p>
+                      <p className="mt-1 text-xs text-secondary-400">Free, Pro (2,280 Tk/mo), Premium (5,880 Tk/mo)</p>
                     </div>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* TAB: Revenue & Finance with Visual Charts */}
+            {/* TAB: Revenue & Finance in Bangladeshi Taka (Tk / ৳) */}
             {tab === 'Revenue & Finance' && revenue && (
               <section className="mt-6 space-y-6">
-                {/* Financial KPIs */}
+                {/* Financial KPIs in Tk */}
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="rounded-2xl border border-secondary-200 bg-white p-5 shadow-sm">
                     <p className="text-xs font-bold uppercase tracking-wider text-secondary-500">Monthly Recurring (MRR)</p>
                     <p className="mt-2 text-3xl font-extrabold text-emerald-600">
-                      ${revenue.monthlyRecurringRevenueUsd?.toLocaleString()} <span className="text-xs font-normal text-secondary-500">USD/mo</span>
+                      ৳{revenue.monthlyRecurringRevenueTk?.toLocaleString()} <span className="text-xs font-normal text-secondary-500">Tk / month</span>
                     </p>
-                    <p className="mt-1 text-xs text-secondary-400">Recurring SaaS subscriptions</p>
+                    <p className="mt-1 text-xs text-secondary-400">Recurring SaaS subscriptions in Taka</p>
                   </div>
                   <div className="rounded-2xl border border-secondary-200 bg-white p-5 shadow-sm">
                     <p className="text-xs font-bold uppercase tracking-wider text-secondary-500">Annual Run Rate (ARR)</p>
                     <p className="mt-2 text-3xl font-extrabold text-secondary-950">
-                      ${revenue.annualRunRateUsd?.toLocaleString()} <span className="text-xs font-normal text-secondary-500">USD/yr</span>
+                      ৳{revenue.annualRunRateTk?.toLocaleString()} <span className="text-xs font-normal text-secondary-500">Tk / year</span>
                     </p>
                     <p className="mt-1 text-xs text-secondary-400">Annualized active subscriptions</p>
                   </div>
@@ -391,15 +391,15 @@ export default function Admin({ session, initialTab = 'Overview' }) {
                     </p>
                   </div>
                   <div className="rounded-2xl border border-secondary-200 bg-white p-5 shadow-sm">
-                    <p className="text-xs font-bold uppercase tracking-wider text-secondary-500">ARPU (Per User)</p>
+                    <p className="text-xs font-bold uppercase tracking-wider text-secondary-500">ARPU (Per User in Tk)</p>
                     <p className="mt-2 text-3xl font-extrabold text-secondary-950">
-                      ${revenue.averageRevenuePerUserUsd?.toFixed(2)} <span className="text-xs font-normal text-secondary-500">USD</span>
+                      ৳{revenue.averageRevenuePerUserTk?.toFixed(2)} <span className="text-xs font-normal text-secondary-500">Tk</span>
                     </p>
-                    <p className="mt-1 text-xs text-secondary-400">Average blended revenue per user</p>
+                    <p className="mt-1 text-xs text-secondary-400">Average blended revenue per student</p>
                   </div>
                 </div>
 
-                {/* GRAPH & CHART ROW 1: Area Trend Curve + Donut Breakdown */}
+                {/* GRAPH & CHART ROW 1: Area Trend Curve in Tk + Donut Breakdown in Tk */}
                 <div className="grid gap-6 xl:grid-cols-3">
                   <div className="xl:col-span-2">
                     <RevenueAreaChart data={revenue.monthlyBreakdown} />
@@ -413,7 +413,7 @@ export default function Admin({ session, initialTab = 'Overview' }) {
                   </div>
                 </div>
 
-                {/* GRAPH & CHART ROW 2: Bar Chart + Plan Cards */}
+                {/* GRAPH & CHART ROW 2: Bar Chart + Plan Cards in Tk */}
                 <div className="grid gap-6 xl:grid-cols-3">
                   <div>
                     <SubscribersBarChart data={revenue.monthlyBreakdown} />
@@ -423,7 +423,7 @@ export default function Admin({ session, initialTab = 'Overview' }) {
                       <div>
                         <div className="flex items-center justify-between">
                           <span className="rounded-lg bg-secondary-100 px-2 py-0.5 text-xs font-bold uppercase text-secondary-700">Free Tier</span>
-                          <span className="text-base font-extrabold text-secondary-900">$0</span>
+                          <span className="text-base font-extrabold text-secondary-900">0 Tk</span>
                         </div>
                         <p className="mt-3 text-2xl font-black text-secondary-900">{revenue.freeTierCount} <span className="text-xs font-normal text-secondary-500">users</span></p>
                         <p className="mt-1 text-xs text-secondary-500">Discovery search & community</p>
@@ -440,11 +440,11 @@ export default function Admin({ session, initialTab = 'Overview' }) {
                       <div>
                         <div className="flex items-center justify-between">
                           <span className="rounded-lg bg-primary-100 px-2 py-0.5 text-xs font-bold uppercase text-primary-700">Pro Tier</span>
-                          <span className="text-base font-extrabold text-primary-700">$19/mo</span>
+                          <span className="text-base font-extrabold text-primary-700">2,280 Tk/mo</span>
                         </div>
                         <p className="mt-3 text-2xl font-black text-primary-900">{revenue.proTierCount} <span className="text-xs font-normal text-secondary-500">subscribers</span></p>
                         <p className="mt-1 text-xs text-secondary-600">
-                          Yielding <span className="font-bold text-primary-700">${(revenue.proTierCount * 19).toLocaleString()}</span> monthly
+                          Yielding <span className="font-bold text-primary-700">৳{(revenue.proTierCount * 2280).toLocaleString()} Tk</span> monthly
                         </p>
                       </div>
                       <div className="mt-4 h-2 w-full rounded-full bg-primary-100 overflow-hidden">
@@ -459,11 +459,11 @@ export default function Admin({ session, initialTab = 'Overview' }) {
                       <div>
                         <div className="flex items-center justify-between">
                           <span className="rounded-lg bg-purple-100 px-2 py-0.5 text-xs font-bold uppercase text-purple-700">Premium Tier</span>
-                          <span className="text-base font-extrabold text-purple-700">$49/mo</span>
+                          <span className="text-base font-extrabold text-purple-700">5,880 Tk/mo</span>
                         </div>
                         <p className="mt-3 text-2xl font-black text-purple-950">{revenue.premiumTierCount} <span className="text-xs font-normal text-secondary-500">subscribers</span></p>
                         <p className="mt-1 text-xs text-secondary-600">
-                          Yielding <span className="font-bold text-purple-700">${(revenue.premiumTierCount * 49).toLocaleString()}</span> monthly
+                          Yielding <span className="font-bold text-purple-700">৳{(revenue.premiumTierCount * 5880).toLocaleString()} Tk</span> monthly
                         </p>
                       </div>
                       <div className="mt-4 h-2 w-full rounded-full bg-purple-100 overflow-hidden">
@@ -476,14 +476,14 @@ export default function Admin({ session, initialTab = 'Overview' }) {
                   </div>
                 </div>
 
-                {/* Recent Transactions Ledger */}
+                {/* Recent Transactions Ledger in Tk */}
                 <div className="rounded-2xl border border-secondary-200 bg-white shadow-sm overflow-hidden">
                   <div className="border-b border-secondary-200 px-6 py-4 flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <h3 className="text-sm font-bold text-secondary-900 uppercase tracking-wider">
-                        Recent Payment Transactions Ledger
+                        Recent Payment Transactions Ledger (Tk / ৳)
                       </h3>
-                      <p className="mt-0.5 text-xs text-secondary-500">Live feed from Stripe Checkout and Subscription Renewals</p>
+                      <p className="mt-0.5 text-xs text-secondary-500">Live feed from Stripe Checkout and Subscription Renewals in Bangladeshi Taka</p>
                     </div>
                     <input
                       type="text"
@@ -501,7 +501,7 @@ export default function Admin({ session, initialTab = 'Overview' }) {
                           <th className="px-6 py-3.5">Reference / Txn ID</th>
                           <th className="px-6 py-3.5">Customer Email</th>
                           <th className="px-6 py-3.5">Plan / Product</th>
-                          <th className="px-6 py-3.5">Amount Paid</th>
+                          <th className="px-6 py-3.5">Amount Paid (Tk)</th>
                           <th className="px-6 py-3.5">Status</th>
                           <th className="px-6 py-3.5 text-right">Processed Date</th>
                         </tr>
@@ -514,28 +514,31 @@ export default function Admin({ session, initialTab = 'Overview' }) {
                             </td>
                           </tr>
                         ) : (
-                          filteredTransactions.map((tx) => (
-                            <tr key={tx.id} className="hover:bg-secondary-50/50 transition">
-                              <td className="px-6 py-4 font-mono text-xs font-semibold text-secondary-700">{tx.reference}</td>
-                              <td className="px-6 py-4 font-mono text-xs text-secondary-900">{tx.studentEmail}</td>
-                              <td className="px-6 py-4">
-                                <span className={`inline-flex rounded-md px-2 py-0.5 text-xs font-semibold ${
-                                  tx.tier === 'Premium' ? 'bg-purple-100 text-purple-700' : 'bg-primary-100 text-primary-700'
-                                }`}>
-                                  {tx.tier} Subscription
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 font-mono text-xs font-bold text-secondary-950">
-                                ${tx.amount.toFixed(2)} {tx.currency}
-                              </td>
-                              <td className="px-6 py-4">
-                                <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs ${TX_STATUS_BADGES[tx.status] || 'bg-secondary-100 text-secondary-700'}`}>
-                                  {tx.status}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 text-xs text-secondary-400 text-right">{formatDate(tx.createdAt)}</td>
-                            </tr>
-                          ))
+                          filteredTransactions.map((tx) => {
+                            const tkAmount = tx.amountTk || (tx.amount * 120)
+                            return (
+                              <tr key={tx.id} className="hover:bg-secondary-50/50 transition">
+                                <td className="px-6 py-4 font-mono text-xs font-semibold text-secondary-700">{tx.reference}</td>
+                                <td className="px-6 py-4 font-mono text-xs text-secondary-900">{tx.studentEmail}</td>
+                                <td className="px-6 py-4">
+                                  <span className={`inline-flex rounded-md px-2 py-0.5 text-xs font-semibold ${
+                                    tx.tier === 'Premium' ? 'bg-purple-100 text-purple-700' : 'bg-primary-100 text-primary-700'
+                                  }`}>
+                                    {tx.tier} Subscription
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 font-mono text-xs font-bold text-secondary-950">
+                                  ৳{tkAmount.toLocaleString()} Tk
+                                </td>
+                                <td className="px-6 py-4">
+                                  <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs ${TX_STATUS_BADGES[tx.status] || 'bg-secondary-100 text-secondary-700'}`}>
+                                    {tx.status}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 text-xs text-secondary-400 text-right">{formatDate(tx.createdAt)}</td>
+                              </tr>
+                            )
+                          })
                         )}
                       </tbody>
                     </table>
@@ -634,9 +637,9 @@ export default function Admin({ session, initialTab = 'Overview' }) {
                                 onChange={(event) => changeTier(user, event.target.value)}
                                 value={user.subscriptionTier || 'Free'}
                               >
-                                <option value="Free">Free Tier</option>
-                                <option value="Pro">Pro Tier ($19/mo)</option>
-                                <option value="Premium">Premium Tier ($49/mo)</option>
+                                <option value="Free">Free Tier (0 Tk)</option>
+                                <option value="Pro">Pro Tier (2,280 Tk/mo)</option>
+                                <option value="Premium">Premium Tier (5,880 Tk/mo)</option>
                               </select>
                             </td>
                             <td className="px-5 py-4 text-xs text-secondary-500">
@@ -787,7 +790,7 @@ export default function Admin({ session, initialTab = 'Overview' }) {
                               </span>
                             </td>
                             <td className="px-5 py-4 font-mono text-xs font-bold text-secondary-900">
-                              ${p.annualTuitionUsd?.toLocaleString()} USD
+                              ${p.annualTuitionUsd?.toLocaleString()} USD (৳{(p.annualTuitionUsd * 120)?.toLocaleString()} Tk)
                             </td>
                             <td className="px-5 py-4 text-xs text-secondary-500">{p.durationMonths} months</td>
                           </tr>

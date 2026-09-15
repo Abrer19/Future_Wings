@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 /**
- * Interactive Area & Line Chart for Revenue & MRR Trends
+ * Interactive Area & Line Chart for Revenue & MRR Trends in Bangladeshi Taka (Tk / ৳)
  */
 export function RevenueAreaChart({ data = [] }) {
   const [hoverIndex, setHoverIndex] = useState(null)
@@ -14,19 +14,21 @@ export function RevenueAreaChart({ data = [] }) {
     )
   }
 
-  const maxVal = Math.max(...data.map((d) => d.grossRevenueUsd || d.mrrUsd || 100), 100) * 1.15
+  const maxVal = Math.max(...data.map((d) => d.grossRevenueTk || d.mrrTk || 10000), 10000) * 1.15
   const chartHeight = 220
   const chartWidth = 560
-  const paddingX = 45
+  const paddingX = 55
   const paddingY = 25
   const innerWidth = chartWidth - paddingX * 2
   const innerHeight = chartHeight - paddingY * 2
 
   const points = data.map((d, i) => {
+    const gross = d.grossRevenueTk || (d.grossRevenueUsd * 120) || 0
+    const mrr = d.mrrTk || (d.mrrUsd * 120) || 0
     const x = paddingX + (i / Math.max(data.length - 1, 1)) * innerWidth
-    const yGross = chartHeight - paddingY - (d.grossRevenueUsd / maxVal) * innerHeight
-    const yMrr = chartHeight - paddingY - (d.mrrUsd / maxVal) * innerHeight
-    return { x, yGross, yMrr, ...d }
+    const yGross = chartHeight - paddingY - (gross / maxVal) * innerHeight
+    const yMrr = chartHeight - paddingY - (mrr / maxVal) * innerHeight
+    return { x, yGross, yMrr, gross, mrr, ...d }
   })
 
   // Create smooth SVG cubic bezier path
@@ -53,18 +55,18 @@ export function RevenueAreaChart({ data = [] }) {
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-secondary-100 pb-4">
         <div>
           <h3 className="text-sm font-bold uppercase tracking-wider text-secondary-900">
-            Revenue & MRR Growth Curve
+            Revenue & MRR Growth Curve (Tk / ৳)
           </h3>
-          <p className="mt-0.5 text-xs text-secondary-500">6-Month rolling growth trajectory</p>
+          <p className="mt-0.5 text-xs text-secondary-500">6-Month rolling growth in Bangladeshi Taka</p>
         </div>
         <div className="flex items-center gap-4 text-xs font-semibold">
           <div className="flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full bg-primary-600" />
-            <span className="text-secondary-700">Gross Revenue</span>
+            <span className="text-secondary-700">Gross Revenue (Tk)</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-            <span className="text-secondary-700">Monthly Recurring (MRR)</span>
+            <span className="text-secondary-700">MRR (Tk)</span>
           </div>
         </div>
       </div>
@@ -72,11 +74,11 @@ export function RevenueAreaChart({ data = [] }) {
       <div className="mt-4 relative">
         <svg className="w-full h-auto overflow-visible" viewBox={`0 0 ${chartWidth} ${chartHeight}`}>
           <defs>
-            <linearGradient id="revenueAreaGrad" x1="0" y1="0" x2="0" y2="1">
+            <linearGradient id="revenueAreaGradTk" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.28" />
               <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.0" />
             </linearGradient>
-            <linearGradient id="mrrLineGrad" x1="0" y1="0" x2="1" y2="0">
+            <linearGradient id="mrrLineGradTk" x1="0" y1="0" x2="1" y2="0">
               <stop offset="0%" stopColor="#10b981" />
               <stop offset="100%" stopColor="#059669" />
             </linearGradient>
@@ -102,14 +104,14 @@ export function RevenueAreaChart({ data = [] }) {
                   textAnchor="end"
                   className="fill-secondary-400 font-mono text-[10px]"
                 >
-                  ${Math.round(tick).toLocaleString()}
+                  ৳{Math.round(tick).toLocaleString()}
                 </text>
               </g>
             )
           })}
 
           {/* Area under Gross Revenue */}
-          <path d={areaPath} fill="url(#revenueAreaGrad)" />
+          <path d={areaPath} fill="url(#revenueAreaGradTk)" />
 
           {/* Lines */}
           <path d={grossPath} fill="none" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round" />
@@ -118,7 +120,6 @@ export function RevenueAreaChart({ data = [] }) {
           {/* Data Points */}
           {points.map((pt, i) => (
             <g key={i} className="cursor-pointer" onMouseEnter={() => setHoverIndex(i)} onMouseLeave={() => setHoverIndex(null)}>
-              {/* Vertical indicator line on hover */}
               {hoverIndex === i && (
                 <line
                   x1={pt.x}
@@ -130,7 +131,6 @@ export function RevenueAreaChart({ data = [] }) {
                   strokeDasharray="2 2"
                 />
               )}
-              {/* Gross point */}
               <circle
                 cx={pt.x}
                 cy={pt.yGross}
@@ -140,7 +140,6 @@ export function RevenueAreaChart({ data = [] }) {
                 strokeWidth="2"
                 className="transition-all duration-150"
               />
-              {/* MRR point */}
               <circle
                 cx={pt.x}
                 cy={pt.yMrr}
@@ -150,7 +149,6 @@ export function RevenueAreaChart({ data = [] }) {
                 strokeWidth="2"
                 className="transition-all duration-150"
               />
-              {/* X Axis label */}
               <text
                 x={pt.x}
                 y={chartHeight - 6}
@@ -174,10 +172,10 @@ export function RevenueAreaChart({ data = [] }) {
           >
             <p className="text-[11px] font-bold text-secondary-300">{points[hoverIndex].month}</p>
             <p className="mt-1 text-xs font-semibold text-blue-300">
-              Gross: <span className="font-mono text-white">${points[hoverIndex].grossRevenueUsd.toLocaleString()} USD</span>
+              Gross: <span className="font-mono text-white">৳{points[hoverIndex].gross.toLocaleString()} Tk</span>
             </p>
             <p className="text-xs font-semibold text-emerald-300">
-              MRR: <span className="font-mono text-white">${points[hoverIndex].mrrUsd.toLocaleString()} USD</span>
+              MRR: <span className="font-mono text-white">৳{points[hoverIndex].mrr.toLocaleString()} Tk/mo</span>
             </p>
             <p className="mt-0.5 text-[10px] text-secondary-400">
               Active Subscribers: {points[hoverIndex].subscriberCount}
@@ -190,11 +188,11 @@ export function RevenueAreaChart({ data = [] }) {
 }
 
 /**
- * Donut Chart: Revenue Breakdown by Tier
+ * Donut Chart: Revenue Breakdown by Tier in Tk
  */
 export function RevenueDonutChart({ proCount = 0, premiumCount = 0, freeCount = 0 }) {
-  const proRev = proCount * 19
-  const premiumRev = premiumCount * 49
+  const proRev = proCount * 2280
+  const premiumRev = premiumCount * 5880
   const totalRev = proRev + premiumRev || 1
 
   const proPct = Math.round((proRev / totalRev) * 100)
@@ -210,13 +208,12 @@ export function RevenueDonutChart({ proCount = 0, premiumCount = 0, freeCount = 
   return (
     <div className="rounded-2xl border border-secondary-200 bg-white p-6 shadow-sm">
       <h3 className="text-sm font-bold uppercase tracking-wider text-secondary-900 border-b border-secondary-100 pb-4">
-        MRR Share by Tier
+        MRR Share in Taka (Tk / ৳)
       </h3>
 
       <div className="mt-6 flex flex-col sm:flex-row items-center justify-around gap-6">
         <div className="relative flex items-center justify-center">
           <svg className="h-44 w-44 -rotate-90 transform" viewBox="0 0 160 160">
-            {/* Background ring */}
             <circle
               cx="80"
               cy="80"
@@ -225,7 +222,6 @@ export function RevenueDonutChart({ proCount = 0, premiumCount = 0, freeCount = 
               stroke="#f1f5f9"
               strokeWidth={strokeWidth}
             />
-            {/* Pro segment */}
             <circle
               cx="80"
               cy="80"
@@ -238,7 +234,6 @@ export function RevenueDonutChart({ proCount = 0, premiumCount = 0, freeCount = 
               strokeLinecap="round"
               className="transition-all duration-500"
             />
-            {/* Premium segment */}
             <circle
               cx="80"
               cy="80"
@@ -255,8 +250,8 @@ export function RevenueDonutChart({ proCount = 0, premiumCount = 0, freeCount = 
 
           <div className="absolute text-center">
             <p className="text-[10px] font-bold uppercase tracking-wider text-secondary-400">Total MRR</p>
-            <p className="text-xl font-extrabold text-secondary-950">${totalRev.toLocaleString()}</p>
-            <p className="text-[10px] text-secondary-500">USD/mo</p>
+            <p className="text-xl font-extrabold text-secondary-950">৳{totalRev.toLocaleString()}</p>
+            <p className="text-[10px] text-secondary-500">Tk / month</p>
           </div>
         </div>
 
@@ -266,12 +261,12 @@ export function RevenueDonutChart({ proCount = 0, premiumCount = 0, freeCount = 
             <div className="flex items-center gap-2">
               <span className="h-3 w-3 rounded-full bg-primary-600" />
               <div>
-                <p className="text-xs font-bold text-primary-950">Pro Tier ($19/mo)</p>
+                <p className="text-xs font-bold text-primary-950">Pro Tier (2,280 Tk/mo)</p>
                 <p className="text-[11px] text-primary-700">{proCount} subscribers</p>
               </div>
             </div>
             <div className="text-right">
-              <p className="font-mono text-xs font-extrabold text-primary-900">${proRev.toLocaleString()} USD</p>
+              <p className="font-mono text-xs font-extrabold text-primary-900">৳{proRev.toLocaleString()} Tk</p>
               <p className="text-[10px] font-bold text-primary-600">{proPct}%</p>
             </div>
           </div>
@@ -280,12 +275,12 @@ export function RevenueDonutChart({ proCount = 0, premiumCount = 0, freeCount = 
             <div className="flex items-center gap-2">
               <span className="h-3 w-3 rounded-full bg-purple-600" />
               <div>
-                <p className="text-xs font-bold text-purple-950">Premium Tier ($49/mo)</p>
+                <p className="text-xs font-bold text-purple-950">Premium Tier (5,880 Tk/mo)</p>
                 <p className="text-[11px] text-purple-700">{premiumCount} subscribers</p>
               </div>
             </div>
             <div className="text-right">
-              <p className="font-mono text-xs font-extrabold text-purple-900">${premiumRev.toLocaleString()} USD</p>
+              <p className="font-mono text-xs font-extrabold text-purple-900">৳{premiumRev.toLocaleString()} Tk</p>
               <p className="text-[10px] font-bold text-purple-600">{premiumPct}%</p>
             </div>
           </div>
@@ -293,7 +288,7 @@ export function RevenueDonutChart({ proCount = 0, premiumCount = 0, freeCount = 
           <div className="flex items-center justify-between gap-4 rounded-xl border border-secondary-200 bg-secondary-50 p-2.5 px-3">
             <div className="flex items-center gap-2">
               <span className="h-3 w-3 rounded-full bg-secondary-400" />
-              <p className="text-xs font-medium text-secondary-600">Free Tier ($0/mo)</p>
+              <p className="text-xs font-medium text-secondary-600">Free Tier (0 Tk/mo)</p>
             </div>
             <p className="text-xs font-semibold text-secondary-700">{freeCount} users</p>
           </div>
@@ -320,7 +315,7 @@ export function SubscribersBarChart({ data = [] }) {
           <p className="mt-0.5 text-xs text-secondary-500">Paid customer acquisition pace</p>
         </div>
         <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-200">
-          Positive Trend
+          Tk Growth
         </span>
       </div>
 
@@ -335,14 +330,12 @@ export function SubscribersBarChart({ data = [] }) {
               onMouseEnter={() => setHoveredMonth(i)}
               onMouseLeave={() => setHoveredMonth(null)}
             >
-              {/* Tooltip on bar hover */}
               {isHovered && (
                 <div className="absolute -top-10 z-20 rounded-lg bg-secondary-900 px-2.5 py-1 text-[11px] font-bold text-white shadow-lg whitespace-nowrap">
                   {m.subscriberCount} Paid Members
                 </div>
               )}
 
-              {/* Visual Bar with animated gradient */}
               <div
                 className={`w-full max-w-[36px] rounded-t-lg transition-all duration-300 ${
                   isHovered

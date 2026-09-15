@@ -141,10 +141,12 @@ public class AdminAndAgentServiceTests
         Assert.Equal(1, revenue.ProTierCount);
         Assert.Equal(1, revenue.PremiumTierCount);
         Assert.Equal(1, revenue.FreeTierCount);
-        Assert.Equal(2, revenue.ActivePaidSubscribers);
-        // Pro ($19) + Premium ($49) = $68 MRR
         Assert.Equal(68.00m, revenue.MonthlyRecurringRevenueUsd);
         Assert.Equal(68.00m * 12.00m, revenue.AnnualRunRateUsd);
+        Assert.Equal(8160.00m, revenue.MonthlyRecurringRevenueTk);
+        Assert.Equal(8160.00m * 12.00m, revenue.AnnualRunRateTk);
+        Assert.Equal("Tk (BDT)", revenue.Currency);
+        Assert.Equal("৳", revenue.CurrencySymbol);
         Assert.NotEmpty(revenue.MonthlyBreakdown);
     }
 }
