@@ -13,6 +13,8 @@ public static class VisaRiskCalculator
         ["Canada"] = new(18000, 6.5m, 6), ["United Kingdom"] = new(18000, 6.5m, 6),
         ["UK"] = new(18000, 6.5m, 6), ["Australia"] = new(20000, 6.5m, 6),
         ["Germany"] = new(13000, 6.0m, 4),
+        ["Netherlands"] = new(16000, 6.0m, 4),
+        ["Finland"] = new(14000, 6.0m, 4),
     };
 
     public static VisaRiskResultDto Calculate(VisaAssessmentRequestDto request, int applicationId = 0,
