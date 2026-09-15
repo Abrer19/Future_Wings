@@ -103,6 +103,13 @@ public sealed class VisaServiceTests
     }
 
     [Fact]
+    public async Task MissingApplicationReport_ReturnsNull()
+    {
+        await using var context = CreateContext();
+        Assert.Null(await new VisaService(context).GetRiskForApplicationAsync(1, 999));
+    }
+
+    [Fact]
     public async Task Evaluation_RejectsAnotherUsersApplication()
     {
         await using var context = CreateContext();
