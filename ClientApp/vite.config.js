@@ -12,4 +12,25 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    chunkSizeWarningLimit: 900,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
+            return 'react-vendor'
+          }
+          if (id.includes('node_modules/reactflow/')) {
+            return 'flow-vendor'
+          }
+          if (id.includes('node_modules/@mediapipe/')) {
+            return 'ai-vision'
+          }
+          if (id.includes('node_modules/@xenova/')) {
+            return 'ai-transformers'
+          }
+        },
+      },
+    },
+  },
 })
