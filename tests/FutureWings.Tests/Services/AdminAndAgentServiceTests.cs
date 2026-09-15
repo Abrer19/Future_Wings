@@ -27,9 +27,9 @@ public class AdminAndAgentServiceTests
             new ApplicationState { Id = 5, Name = "Rejected" }
         );
 
-        var country = new Country { Id = 1, Name = "Canada", Code = "CA" };
+        var country = new Country { Id = 1, Name = "Canada", Code = "CA", Description = "Top study destination in North America." };
         var university = new University { Id = 1, CountryId = 1, Name = "University of Toronto", City = "Toronto" };
-        var program = new AcademicProgram { Id = 1, UniversityId = 1, Name = "MSc Computer Science", Level = "Master's", AnnualTuitionUsd = 31000, DurationMonths = 24 };
+        var program = new AcademicProgram { Id = 1, UniversityId = 1, Name = "MSc Computer Science", Level = "Master's", AnnualTuitionUsd = 31000, DurationMonths = 24, Tags = "AI, STEM" };
 
         var adminUser = new User { Id = 1, Email = "admin@test.com", Role = "Admin", SubscriptionTier = "Premium" };
         var agentUser = new User { Id = 2, Email = "agent@test.com", Role = "Agent", SubscriptionTier = "Pro" };
@@ -113,6 +113,10 @@ public class AdminAndAgentServiceTests
         Assert.Equal("Canada", overview.CountryName);
         Assert.Equal(1, overview.TotalApplicants);
         Assert.Equal(1, overview.PendingReviewCount);
+        Assert.Equal("Tk (BDT)", overview.Currency);
+        Assert.Equal("৳", overview.CurrencySymbol);
+        Assert.True(overview.TotalPipelineTuitionTk > 0);
+        Assert.NotEmpty(overview.StageBreakdown);
     }
 
     [Fact]
@@ -127,6 +131,36 @@ public class AdminAndAgentServiceTests
         var appInDb = await context.Applications.FindAsync(1);
         Assert.NotNull(appInDb);
         Assert.Equal(4, appInDb.ApplicationStateId);
+    }
+
+    [Fact]
+    public async Task AgentService_BatchUpdateApplicantStatusAsync_UpdatesMultipleApplications()
+    {
+        using var context = CreateInMemoryDbContext();
+        var agentService = new AgentService(context);
+
+        var count = await agentService.BatchUpdateApplicantStatusAsync(new List<int> { 1 }, "Under Review");
+        Assert.Equal(1, count);
+
+        var appInDb = await context.Applications.FindAsync(1);
+        Assert.NotNull(appInDb);
+        Assert.Equal(3, appInDb.ApplicationStateId);
+    }
+
+    [Fact]
+    public async Task AgentService_GetUniversitiesAndProgramsAsync_ReturnsTerritoryCatalog()
+    {
+        using var context = CreateInMemoryDbContext();
+        var agentService = new AgentService(context);
+
+        var unis = await agentService.GetUniversitiesAsync(1);
+        Assert.Single(unis);
+        Assert.Equal("University of Toronto", unis[0].Name);
+
+        var progs = await agentService.GetProgramsAsync(1);
+        Assert.Single(progs);
+        Assert.Equal("MSc Computer Science", progs[0].Name);
+        Assert.Equal(31000m * 120m, progs[0].AnnualTuitionTk);
     }
 
     [Fact]
