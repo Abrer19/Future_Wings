@@ -37,7 +37,7 @@ const studentPages = {
 
 const ROLE_NAV_GROUPS = {
   Admin: [
-    { label: 'Platform Governance', items: ['Dashboard', 'User Management', 'Applications Oversight'] },
+    { label: 'Platform Governance', items: ['Dashboard', 'Revenue & Finance', 'User Management', 'Applications Oversight'] },
     { label: 'Academic Oversight', items: ['Academic Catalog', 'Scholarships Manager'] },
   ],
   Agent: [
@@ -109,7 +109,7 @@ function App() {
   // Guard against unauthorized page access
   useEffect(() => {
     if (!session) return
-    if ((activePage === 'User Management' || activePage === 'Applications Oversight' || activePage === 'Academic Catalog' || activePage === 'Scholarships Manager') && session.role !== 'Admin') {
+    if ((activePage === 'User Management' || activePage === 'Applications Oversight' || activePage === 'Revenue & Finance' || activePage === 'Academic Catalog' || activePage === 'Scholarships Manager') && session.role !== 'Admin') {
       setActivePage(getDefaultPage(session.role))
     } else if (activePage === 'Agent Panel' && session.role !== 'Agent') {
       setActivePage(getDefaultPage(session.role))
@@ -179,6 +179,9 @@ function App() {
     if (session.role === 'Admin') {
       if (activePage === 'Dashboard') {
         return <Admin initialTab="Overview" onNavigate={goTo} session={session} />
+      }
+      if (activePage === 'Revenue & Finance') {
+        return <Admin initialTab="Revenue & Finance" onNavigate={goTo} session={session} />
       }
       if (activePage === 'User Management') {
         return <Admin initialTab="User Management" onNavigate={goTo} session={session} />

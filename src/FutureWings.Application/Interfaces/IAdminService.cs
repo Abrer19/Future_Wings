@@ -10,5 +10,6 @@ public interface IAdminService
     Task<AdminUserDto?> SetUserSubscriptionTierAsync(int userId, string tier);
     Task<IReadOnlyList<AdminApplicationDto>> GetAllApplicationsAsync();
     Task<bool> UpdateApplicationStatusAsync(int applicationId, string status);
+    Task<AdminRevenueDto> GetRevenueOverviewAsync();
 }
 

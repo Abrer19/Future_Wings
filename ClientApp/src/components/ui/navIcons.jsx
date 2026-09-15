@@ -85,6 +85,12 @@ const icons = {
   'Scholarships Directory': () => (
     <Icon><path d="M12 4 2.8 8.6 12 13.2l9.2-4.6z" /><path d="M6.4 10.7v4.1c0 1.6 2.5 2.9 5.6 2.9s5.6-1.3 5.6-2.9v-4.1" /></Icon>
   ),
+  'Revenue & Finance': () => (
+    <Icon><line x1="12" x2="12" y1="1" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></Icon>
+  ),
+  Revenue: () => (
+    <Icon><line x1="12" x2="12" y1="1" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></Icon>
+  ),
 }
 
 export default function NavIcon({ page }) {

@@ -12,12 +12,20 @@ const STATUS_BADGES = {
   Withdrawn: 'bg-secondary-100 text-secondary-500',
 }
 
+const TX_STATUS_BADGES = {
+  Succeeded: 'bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold',
+  Pending: 'bg-amber-50 text-amber-700 border border-amber-200',
+  Failed: 'bg-rose-50 text-rose-700 border border-rose-200',
+  Refunded: 'bg-secondary-100 text-secondary-600',
+}
+
 export default function Admin({ session, initialTab = 'Overview' }) {
   const [dashboard, setDashboard] = useState(null)
   const [users, setUsers] = useState([])
   const [applications, setApplications] = useState([])
   const [programs, setPrograms] = useState([])
   const [scholarships, setScholarships] = useState([])
+  const [revenue, setRevenue] = useState(null)
   const [tab, setTab] = useState(initialTab)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -39,6 +47,9 @@ export default function Admin({ session, initialTab = 'Overview' }) {
   // Scholarship filter
   const [scholarshipSearch, setScholarshipSearch] = useState('')
 
+  // Revenue filter
+  const [txSearch, setTxSearch] = useState('')
+
   useEffect(() => {
     if (initialTab) {
       setTab(initialTab)
@@ -49,18 +60,20 @@ export default function Admin({ session, initialTab = 'Overview' }) {
     setLoading(true)
     setError('')
     try {
-      const [summary, userList, appList, programList, scholarshipList] = await Promise.all([
+      const [summary, userList, appList, programList, scholarshipList, revenueData] = await Promise.all([
         apiRequest('/admin/dashboard', { token: session.token }),
         apiRequest('/admin/users', { token: session.token }),
         apiRequest('/admin/applications', { token: session.token }),
         apiRequest('/program', { token: session.token }).catch(() => []),
         apiRequest('/scholarship', { token: session.token }).catch(() => []),
+        apiRequest('/admin/revenue', { token: session.token }).catch(() => null),
       ])
       setDashboard(summary)
       setUsers(userList)
       setApplications(appList)
       setPrograms(programList || [])
       setScholarships(scholarshipList || [])
+      setRevenue(revenueData)
     } catch (requestError) {
       setError(requestError.message)
     } finally {
@@ -99,6 +112,9 @@ export default function Admin({ session, initialTab = 'Overview' }) {
       })
       setUsers((current) => current.map((item) => (item.id === updated.id ? updated : item)))
       setToast(`Updated subscription tier for ${user.email} to ${tier}.`)
+      // Refresh revenue stats
+      const refreshedRev = await apiRequest('/admin/revenue', { token: session.token }).catch(() => null)
+      if (refreshedRev) setRevenue(refreshedRev)
     } catch (requestError) {
       setError(requestError.message)
     }
@@ -160,6 +176,15 @@ export default function Admin({ session, initialTab = 'Overview' }) {
     )
   })
 
+  const filteredTransactions = revenue?.recentTransactions?.filter((tx) => {
+    return (
+      !txSearch ||
+      tx.studentEmail?.toLowerCase().includes(txSearch.toLowerCase()) ||
+      tx.reference?.toLowerCase().includes(txSearch.toLowerCase()) ||
+      tx.tier?.toLowerCase().includes(txSearch.toLowerCase())
+    )
+  }) || []
+
   return (
     <div className="mx-auto max-w-7xl">
       {/* Enterprise Admin Header */}
@@ -175,7 +200,7 @@ export default function Admin({ session, initialTab = 'Overview' }) {
             Administration Dashboard
           </h1>
           <p className="mt-1 text-sm text-secondary-600">
-            Manage platform accounts, student admissions, university programs, and global operations.
+            Manage platform accounts, subscriptions & revenue, student admissions, and academic programs.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -210,9 +235,9 @@ export default function Admin({ session, initialTab = 'Overview' }) {
                 detail={`${dashboard.adminUsers} Admins - ${dashboard.agentUsers} Agents`}
               />
               <Metric
-                label="Admissions Pipeline"
-                value={dashboard.totalApplications}
-                detail="Applications across all institutions"
+                label="Monthly Recurring (MRR)"
+                value={`$${revenue?.monthlyRecurringRevenueUsd ? revenue.monthlyRecurringRevenueUsd.toLocaleString() : '0'}`}
+                detail={`ARR: $${revenue?.annualRunRateUsd ? revenue.annualRunRateUsd.toLocaleString() : '0'}`}
               />
               <Metric
                 label="Institutions & Programs"
@@ -231,6 +256,7 @@ export default function Admin({ session, initialTab = 'Overview' }) {
             <div className="mt-8 flex flex-wrap gap-2 border-b border-secondary-200">
               {[
                 { id: 'Overview', label: 'Platform Overview' },
+                { id: 'Revenue & Finance', label: 'Revenue & Billing' },
                 { id: 'User Management', label: 'User Directory & Roles' },
                 { id: 'Applications Oversight', label: 'Applications Queue' },
                 { id: 'Academic Catalog', label: 'University Programs' },
@@ -334,6 +360,207 @@ export default function Admin({ session, initialTab = 'Overview' }) {
                   </div>
                 </div>
               </div>
+            )}
+
+            {/* TAB: Revenue & Finance */}
+            {tab === 'Revenue & Finance' && revenue && (
+              <section className="mt-6 space-y-6">
+                {/* Financial KPIs */}
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="rounded-2xl border border-secondary-200 bg-white p-5 shadow-sm">
+                    <p className="text-xs font-bold uppercase tracking-wider text-secondary-500">Monthly Recurring (MRR)</p>
+                    <p className="mt-2 text-3xl font-extrabold text-emerald-600">
+                      ${revenue.monthlyRecurringRevenueUsd?.toLocaleString()} <span className="text-xs font-normal text-secondary-500">USD/mo</span>
+                    </p>
+                    <p className="mt-1 text-xs text-secondary-400">Recurring SaaS subscriptions</p>
+                  </div>
+                  <div className="rounded-2xl border border-secondary-200 bg-white p-5 shadow-sm">
+                    <p className="text-xs font-bold uppercase tracking-wider text-secondary-500">Annual Run Rate (ARR)</p>
+                    <p className="mt-2 text-3xl font-extrabold text-secondary-950">
+                      ${revenue.annualRunRateUsd?.toLocaleString()} <span className="text-xs font-normal text-secondary-500">USD/yr</span>
+                    </p>
+                    <p className="mt-1 text-xs text-secondary-400">Annualized active subscriptions</p>
+                  </div>
+                  <div className="rounded-2xl border border-secondary-200 bg-white p-5 shadow-sm">
+                    <p className="text-xs font-bold uppercase tracking-wider text-secondary-500">Paid Subscribers</p>
+                    <p className="mt-2 text-3xl font-extrabold text-primary-600">
+                      {revenue.activePaidSubscribers} <span className="text-xs font-normal text-secondary-500">/ {revenue.totalUsers} users</span>
+                    </p>
+                    <p className="mt-1 text-xs text-secondary-400">
+                      {revenue.totalUsers > 0 ? ((revenue.activePaidSubscribers / revenue.totalUsers) * 100).toFixed(1) : 0}% conversion rate
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-secondary-200 bg-white p-5 shadow-sm">
+                    <p className="text-xs font-bold uppercase tracking-wider text-secondary-500">ARPU (Per User)</p>
+                    <p className="mt-2 text-3xl font-extrabold text-secondary-950">
+                      ${revenue.averageRevenuePerUserUsd?.toFixed(2)} <span className="text-xs font-normal text-secondary-500">USD</span>
+                    </p>
+                    <p className="mt-1 text-xs text-secondary-400">Average blended revenue per user</p>
+                  </div>
+                </div>
+
+                {/* Plan Distribution & Pricing Model */}
+                <div className="grid gap-6 lg:grid-cols-3">
+                  <div className="rounded-2xl border border-secondary-200 bg-white p-6 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="rounded-lg bg-secondary-100 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-secondary-700">
+                        Free Tier
+                      </span>
+                      <span className="text-lg font-extrabold text-secondary-900">$0/mo</span>
+                    </div>
+                    <p className="mt-3 text-3xl font-black text-secondary-900">{revenue.freeTierCount} <span className="text-xs font-normal text-secondary-500">users</span></p>
+                    <p className="mt-1 text-xs text-secondary-500">Basic discovery & program search</p>
+                    <div className="mt-4 h-2 w-full rounded-full bg-secondary-100 overflow-hidden">
+                      <div
+                        className="h-full bg-secondary-400 rounded-full"
+                        style={{ width: `${revenue.totalUsers > 0 ? (revenue.freeTierCount / revenue.totalUsers) * 100 : 0}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-primary-200 bg-primary-50/30 p-6 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="rounded-lg bg-primary-100 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-primary-700">
+                        Pro Tier
+                      </span>
+                      <span className="text-lg font-extrabold text-primary-700">$19/mo</span>
+                    </div>
+                    <p className="mt-3 text-3xl font-black text-primary-900">{revenue.proTierCount} <span className="text-xs font-normal text-secondary-500">subscribers</span></p>
+                    <p className="mt-1 text-xs text-secondary-600">
+                      Contributing <span className="font-bold text-primary-700">${(revenue.proTierCount * 19).toLocaleString()} USD</span> monthly
+                    </p>
+                    <div className="mt-4 h-2 w-full rounded-full bg-primary-100 overflow-hidden">
+                      <div
+                        className="h-full bg-primary-600 rounded-full"
+                        style={{ width: `${revenue.totalUsers > 0 ? (revenue.proTierCount / revenue.totalUsers) * 100 : 0}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-purple-200 bg-purple-50/30 p-6 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="rounded-lg bg-purple-100 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-purple-700">
+                        Premium Tier
+                      </span>
+                      <span className="text-lg font-extrabold text-purple-700">$49/mo</span>
+                    </div>
+                    <p className="mt-3 text-3xl font-black text-purple-950">{revenue.premiumTierCount} <span className="text-xs font-normal text-secondary-500">subscribers</span></p>
+                    <p className="mt-1 text-xs text-secondary-600">
+                      Contributing <span className="font-bold text-purple-700">${(revenue.premiumTierCount * 49).toLocaleString()} USD</span> monthly
+                    </p>
+                    <div className="mt-4 h-2 w-full rounded-full bg-purple-100 overflow-hidden">
+                      <div
+                        className="h-full bg-purple-600 rounded-full"
+                        style={{ width: `${revenue.totalUsers > 0 ? (revenue.premiumTierCount / revenue.totalUsers) * 100 : 0}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 6-Month Rolling Revenue Growth Table */}
+                <div className="rounded-2xl border border-secondary-200 bg-white shadow-sm overflow-hidden">
+                  <div className="border-b border-secondary-200 px-6 py-4 flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-secondary-900 uppercase tracking-wider">
+                      Rolling 6-Month SaaS Growth & Gross Volume
+                    </h3>
+                    <span className="text-xs font-medium text-secondary-500">Currency: USD</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-secondary-50 text-[11px] font-bold uppercase tracking-wider text-secondary-500">
+                        <tr>
+                          <th className="px-6 py-3.5">Billing Month</th>
+                          <th className="px-6 py-3.5">Estimated Gross Revenue</th>
+                          <th className="px-6 py-3.5">MRR Pace</th>
+                          <th className="px-6 py-3.5">Active Subscribers</th>
+                          <th className="px-6 py-3.5 text-right">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-secondary-100">
+                        {revenue.monthlyBreakdown?.map((m, idx) => (
+                          <tr key={idx} className="hover:bg-secondary-50/50 transition">
+                            <td className="px-6 py-4 font-semibold text-secondary-900">{m.month}</td>
+                            <td className="px-6 py-4 font-mono font-bold text-secondary-900">${m.grossRevenueUsd.toLocaleString()} USD</td>
+                            <td className="px-6 py-4 font-mono text-xs font-semibold text-emerald-600">${m.mrrUsd.toLocaleString()} USD/mo</td>
+                            <td className="px-6 py-4 text-xs font-medium text-secondary-700">{m.subscriberCount} paid members</td>
+                            <td className="px-6 py-4 text-right">
+                              <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200">
+                                Reconciled
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Recent Transactions Ledger */}
+                <div className="rounded-2xl border border-secondary-200 bg-white shadow-sm overflow-hidden">
+                  <div className="border-b border-secondary-200 px-6 py-4 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-bold text-secondary-900 uppercase tracking-wider">
+                        Recent Payment Transactions Ledger
+                      </h3>
+                      <p className="mt-0.5 text-xs text-secondary-500">Live feed from Stripe Checkout and Subscription Renewals</p>
+                    </div>
+                    <input
+                      type="text"
+                      value={txSearch}
+                      onChange={(e) => setTxSearch(e.target.value)}
+                      placeholder="Search student or transaction reference..."
+                      className="w-72 rounded-xl border border-secondary-300 bg-white px-3.5 py-2 text-xs text-secondary-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    />
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-secondary-50 text-[11px] font-bold uppercase tracking-wider text-secondary-500">
+                        <tr>
+                          <th className="px-6 py-3.5">Reference / Txn ID</th>
+                          <th className="px-6 py-3.5">Customer Email</th>
+                          <th className="px-6 py-3.5">Plan / Product</th>
+                          <th className="px-6 py-3.5">Amount Paid</th>
+                          <th className="px-6 py-3.5">Status</th>
+                          <th className="px-6 py-3.5 text-right">Processed Date</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-secondary-100">
+                        {filteredTransactions.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="px-6 py-12 text-center text-secondary-500">
+                              No transactions match the search criteria.
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredTransactions.map((tx) => (
+                            <tr key={tx.id} className="hover:bg-secondary-50/50 transition">
+                              <td className="px-6 py-4 font-mono text-xs font-semibold text-secondary-700">{tx.reference}</td>
+                              <td className="px-6 py-4 font-mono text-xs text-secondary-900">{tx.studentEmail}</td>
+                              <td className="px-6 py-4">
+                                <span className={`inline-flex rounded-md px-2 py-0.5 text-xs font-semibold ${
+                                  tx.tier === 'Premium' ? 'bg-purple-100 text-purple-700' : 'bg-primary-100 text-primary-700'
+                                }`}>
+                                  {tx.tier} Subscription
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 font-mono text-xs font-bold text-secondary-950">
+                                ${tx.amount.toFixed(2)} {tx.currency}
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs ${TX_STATUS_BADGES[tx.status] || 'bg-secondary-100 text-secondary-700'}`}>
+                                  {tx.status}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-xs text-secondary-400 text-right">{formatDate(tx.createdAt)}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
             )}
 
             {/* TAB: User Management */}

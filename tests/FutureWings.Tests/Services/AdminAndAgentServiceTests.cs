@@ -128,4 +128,23 @@ public class AdminAndAgentServiceTests
         Assert.NotNull(appInDb);
         Assert.Equal(4, appInDb.ApplicationStateId);
     }
+
+    [Fact]
+    public async Task AdminService_GetRevenueOverviewAsync_ReturnsCorrectMrrAndTierDistribution()
+    {
+        using var context = CreateInMemoryDbContext();
+        var adminService = new AdminService(context);
+
+        var revenue = await adminService.GetRevenueOverviewAsync();
+
+        Assert.Equal(3, revenue.TotalUsers);
+        Assert.Equal(1, revenue.ProTierCount);
+        Assert.Equal(1, revenue.PremiumTierCount);
+        Assert.Equal(1, revenue.FreeTierCount);
+        Assert.Equal(2, revenue.ActivePaidSubscribers);
+        // Pro ($19) + Premium ($49) = $68 MRR
+        Assert.Equal(68.00m, revenue.MonthlyRecurringRevenueUsd);
+        Assert.Equal(68.00m * 12.00m, revenue.AnnualRunRateUsd);
+        Assert.NotEmpty(revenue.MonthlyBreakdown);
+    }
 }

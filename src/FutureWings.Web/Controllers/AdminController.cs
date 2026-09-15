@@ -59,6 +59,9 @@ public class AdminController(IAdminService adminService) : ControllerBase
         return updated ? Ok(new { success = true }) : NotFound(new { message = "Application or status not found." });
     }
 
+    [HttpGet("revenue")]
+    public async Task<IActionResult> GetRevenue() => Ok(await adminService.GetRevenueOverviewAsync());
+
     public sealed record RoleRequest(string Role);
     public sealed record TierRequest(string Tier);
     public sealed record ApplicationStatusRequest(string Status);
