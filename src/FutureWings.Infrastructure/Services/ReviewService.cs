@@ -1,23 +1,39 @@
 using FutureWings.Application.DTOs.Review;
 using FutureWings.Application.Interfaces;
+using FutureWings.Domain.Entities;
+using FutureWings.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace FutureWings.Infrastructure.Services;
 
-/// <summary>
-/// STUB: not implemented. Add is a no-op and reads return empty; the Ratings table is never touched.
-/// <para>
-/// Lives here rather than in the Application layer because concrete implementations
-/// belong in Infrastructure; the contract stays in Application/Interfaces/IReviewService.cs.
-/// Replace this class with a real implementation - do not build on its return values.
-/// </para>
-/// </summary>
-public class ReviewService : IReviewService
+public class ReviewService(FutureWingsDbContext context) : IReviewService
 {
-    public Task AddReviewAsync(ReviewDto request) => Task.CompletedTask;
-
-    public Task<IReadOnlyList<ReviewDto>> GetUniversityReviewsAsync(int universityId)
+    public async Task AddReviewAsync(ReviewDto request)
     {
-        IReadOnlyList<ReviewDto> reviews = [];
-        return Task.FromResult(reviews);
+        var rating = new Rating
+        {
+            UserId = request.UserId,
+            UniversityId = request.UniversityId,
+            Score = Math.Clamp(request.Score, 1, 5),
+            Comment = request.Comment
+        };
+        context.Ratings.Add(rating);
+        await context.SaveChangesAsync();
+    }
+
+    public async Task<IReadOnlyList<ReviewDto>> GetUniversityReviewsAsync(int universityId)
+    {
+        return await context.Ratings
+            .AsNoTracking()
+            .Where(r => r.UniversityId == universityId)
+            .Select(r => new ReviewDto
+            {
+                UserId = r.UserId,
+                UniversityId = r.UniversityId,
+                Score = r.Score,
+                Comment = r.Comment
+            })
+            .ToListAsync();
     }
 }
+
