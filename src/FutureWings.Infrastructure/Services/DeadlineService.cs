@@ -52,10 +52,12 @@ public sealed class DeadlineService(FutureWingsDbContext context) : IDeadlineSer
 
     public async Task<bool> DeleteAsync(int userId, int deadlineId)
     {
-        var deleted = await context.Deadlines
-            .Where(deadline => deadline.Id == deadlineId && deadline.UserId == userId)
-            .ExecuteDeleteAsync();
-        return deleted > 0;
+        var deadline = await context.Deadlines.FirstOrDefaultAsync(d => d.Id == deadlineId && d.UserId == userId);
+        if (deadline is null) return false;
+
+        context.Deadlines.Remove(deadline);
+        await context.SaveChangesAsync();
+        return true;
     }
 
     private static DeadlineDto Map(DeadlineEntity deadline) => new()
