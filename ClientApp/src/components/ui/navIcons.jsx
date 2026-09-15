@@ -61,6 +61,30 @@ const icons = {
   Admin: () => (
     <Icon><path d="M12 3.4 4.5 6.6v5c0 4.4 3.1 8.4 7.5 9.4 4.4-1 7.5-5 7.5-9.4v-5z" /><path d="M12 9.5v3M12 15.4h.01" /></Icon>
   ),
+  'User Management': () => (
+    <Icon><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></Icon>
+  ),
+  'Applications Oversight': () => (
+    <Icon><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /><rect height="4" rx="1" width="8" x="8" y="3" /><path d="m9 14 2 2 4-4" /></Icon>
+  ),
+  'Country Agents': () => (
+    <Icon><circle cx="12" cy="12" r="10" /><line x1="2" x2="22" y1="12" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10z" /></Icon>
+  ),
+  'Academic Catalog': () => (
+    <Icon><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /><line x1="9" x2="16" y1="7" y2="7" /><line x1="9" x2="14" y1="11" y2="11" /></Icon>
+  ),
+  'Scholarships Manager': () => (
+    <Icon><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></Icon>
+  ),
+  'Admissions CRM': () => (
+    <Icon><rect height="13" rx="2" width="18" x="3" y="6" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18M12 11v4" /></Icon>
+  ),
+  'Programs Directory': () => (
+    <Icon><circle cx="11" cy="11" r="7" /><path d="m20 20-3.6-3.6" /></Icon>
+  ),
+  'Scholarships Directory': () => (
+    <Icon><path d="M12 4 2.8 8.6 12 13.2l9.2-4.6z" /><path d="M6.4 10.7v4.1c0 1.6 2.5 2.9 5.6 2.9s5.6-1.3 5.6-2.9v-4.1" /></Icon>
+  ),
 }
 
 export default function NavIcon({ page }) {

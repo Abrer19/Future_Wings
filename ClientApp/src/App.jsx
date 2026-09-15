@@ -20,7 +20,7 @@ import Scholarships from './pages/Scholarships.jsx'
 import Subscription from './pages/Subscription.jsx'
 import VisaCheck from './pages/VisaCheck.jsx'
 
-const pages = {
+const studentPages = {
   Dashboard,
   Roadmap,
   Discovery,
@@ -33,21 +33,16 @@ const pages = {
   Community,
   'AI Interview': AiInterview,
   Plans: Subscription,
-  'Agent Panel': AgentPanel,
-  Admin,
-  Login,
-  Register,
 }
 
 const ROLE_NAV_GROUPS = {
   Admin: [
-    { label: 'Administration', items: ['Admin', 'Agent Panel'] },
-    { label: 'Explore Catalog', items: ['Discovery', 'Scholarships', 'Community'] },
-    { label: 'Account', items: ['Profile', 'Plans'] },
+    { label: 'Platform Governance', items: ['Dashboard', 'User Management', 'Applications Oversight', 'Country Agents'] },
+    { label: 'Academic Oversight', items: ['Academic Catalog', 'Scholarships Manager'] },
   ],
   Agent: [
-    { label: 'Agent Operations', items: ['Agent Panel'] },
-    { label: 'Explore & Assist', items: ['Discovery', 'Scholarships'] },
+    { label: 'Admissions CRM', items: ['Agent Panel'] },
+    { label: 'Territory Catalog', items: ['Discovery', 'Scholarships'] },
     { label: 'Account', items: ['Profile'] },
   ],
   Student: [
@@ -58,26 +53,24 @@ const ROLE_NAV_GROUPS = {
   ],
 }
 
-// Which paid feature each page needs. Pages absent from this map are always available.
-// Keys must match the feature keys the server returns from GET /api/subscription/me.
+// Which paid feature each page needs for students.
 const PAGE_FEATURE = {
   Roadmap: 'roadmap',
   'AI Interview': 'aiInterview',
 }
 
-// Only used for the upgrade prompt's wording.
 const FEATURE_TIER = { roadmap: 'Pro', aiInterview: 'Premium' }
 
 const getDefaultPage = (role) => {
-  if (role === 'Admin') return 'Admin'
+  if (role === 'Admin') return 'Dashboard'
   if (role === 'Agent') return 'Agent Panel'
   return 'Dashboard'
 }
 
 const getWorkspaceTitle = (role) => {
-  if (role === 'Admin') return 'Admin console'
-  if (role === 'Agent') return 'Country agent portal'
-  return 'Student workspace'
+  if (role === 'Admin') return 'Admin Console'
+  if (role === 'Agent') return 'Country Agent Portal'
+  return 'Student Workspace'
 }
 
 const initials = (session) =>
@@ -92,12 +85,10 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [subscription, setSubscription] = useState(null)
   const menuButtonRef = useRef(null)
-  const ActivePage = pages[activePage]
 
-  // Entitlements drive which nav items are unlocked. Until this resolves the user is
-  // treated as Free, so a paid page is never briefly exposed on a slow network.
+  // Entitlements for students
   const loadSubscription = useCallback(() => {
-    if (!session?.token) return
+    if (!session?.token || session?.role === 'Admin' || session?.role === 'Agent') return
     apiRequest('/subscription/me', { token: session.token })
       .then(setSubscription)
       .catch(() => setSubscription({ tier: 'Free', features: [] }))
@@ -118,15 +109,13 @@ function App() {
   // Guard against unauthorized page access
   useEffect(() => {
     if (!session) return
-    if (activePage === 'Admin' && session.role !== 'Admin') {
+    if ((activePage === 'User Management' || activePage === 'Applications Oversight' || activePage === 'Academic Catalog' || activePage === 'Scholarships Manager') && session.role !== 'Admin') {
       setActivePage(getDefaultPage(session.role))
-    } else if (activePage === 'Agent Panel' && session.role !== 'Agent' && session.role !== 'Admin') {
+    } else if (activePage === 'Country Agents' && session.role !== 'Admin' && session.role !== 'Agent') {
       setActivePage(getDefaultPage(session.role))
     }
   }, [activePage, session])
 
-  // Below lg the nav is a collapsible drawer; Escape closes it and returns focus to
-  // the control that opened it so keyboard users are never stranded inside it.
   useEffect(() => {
     if (!menuOpen) return undefined
     const onKeyDown = (event) => {
@@ -141,6 +130,7 @@ function App() {
 
   const features = subscription?.features ?? []
   const isLocked = (page) => {
+    if (session?.role === 'Admin' || session?.role === 'Agent') return false
     const required = PAGE_FEATURE[page]
     return Boolean(required) && !features.includes(required)
   }
@@ -165,9 +155,6 @@ function App() {
   }
 
   if (!session) {
-    // Signed-out visitors land on the public homepage. Login/Register are reached
-    // from its header, so 'Home' is kept out of the `pages` object above to stop it
-    // appearing in the signed-in sidebar nav.
     if (activePage !== 'Login' && activePage !== 'Register') {
       return (
         <Home
@@ -187,18 +174,93 @@ function App() {
   const role = session.role === 'Admin' || session.role === 'Agent' ? session.role : 'Student'
   const visibleGroups = ROLE_NAV_GROUPS[role] || ROLE_NAV_GROUPS.Student
 
+  // Resolve component dynamically per role
+  const renderActiveContent = () => {
+    if (session.role === 'Admin') {
+      if (activePage === 'Country Agents') {
+        return <AgentPanel onNavigate={goTo} session={session} />
+      }
+      if (activePage === 'Dashboard') {
+        return <Admin initialTab="Overview" onNavigate={goTo} session={session} />
+      }
+      if (activePage === 'User Management') {
+        return <Admin initialTab="User Management" onNavigate={goTo} session={session} />
+      }
+      if (activePage === 'Applications Oversight') {
+        return <Admin initialTab="Applications Oversight" onNavigate={goTo} session={session} />
+      }
+      if (activePage === 'Academic Catalog') {
+        return <Admin initialTab="Academic Catalog" onNavigate={goTo} session={session} />
+      }
+      if (activePage === 'Scholarships Manager') {
+        return <Admin initialTab="Scholarships Manager" onNavigate={goTo} session={session} />
+      }
+      return <Admin initialTab="Overview" onNavigate={goTo} session={session} />
+    }
+
+    if (session.role === 'Agent') {
+      if (activePage === 'Agent Panel') {
+        return <AgentPanel onNavigate={goTo} session={session} />
+      }
+      if (activePage === 'Discovery') {
+        return <Discovery onNavigate={goTo} session={session} />
+      }
+      if (activePage === 'Scholarships') {
+        return <Scholarships onNavigate={goTo} session={session} />
+      }
+      if (activePage === 'Profile') {
+        return <Profile onNavigate={goTo} session={session} />
+      }
+      return <AgentPanel onNavigate={goTo} session={session} />
+    }
+
+    // Student role
+    const StudentComponent = studentPages[activePage] || Dashboard
+    if (isLocked(activePage)) {
+      return (
+        <LockedFeature
+          onUpgrade={() => goTo('Plans')}
+          page={activePage}
+          requiredTier={FEATURE_TIER[PAGE_FEATURE[activePage]] ?? 'Pro'}
+        />
+      )
+    }
+
+    return (
+      <StudentComponent
+        onNavigate={goTo}
+        onSubscriptionChange={loadSubscription}
+        session={session}
+        subscription={subscription}
+      />
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-surface lg:grid lg:grid-cols-[248px_1fr]">
-      {/* Below lg this collapses to a ~60px top bar; from lg it is the full-height
-          sidebar. The rail separates from content with a hairline border rather than a
-          shadow — product chrome reads cleaner separated by edge than by elevation. */}
+    <div className="min-h-screen bg-surface lg:grid lg:grid-cols-[256px_1fr]">
       <aside className="sticky top-0 z-30 border-b border-secondary-200/80 bg-white px-3 py-3 lg:static lg:flex lg:min-h-screen lg:flex-col lg:border-b-0 lg:border-r lg:py-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-2.5 px-1">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-500 text-[13px] font-bold text-white">FW</div>
+            <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[13px] font-bold text-white ${
+              session.role === 'Admin'
+                ? 'bg-purple-600'
+                : session.role === 'Agent'
+                ? 'bg-emerald-600'
+                : 'bg-primary-500'
+            }`}>
+              FW
+            </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold tracking-tight text-secondary-950">FutureWings</p>
-              <p className="truncate text-[11px] font-medium text-primary-600">{getWorkspaceTitle(session.role)}</p>
+              <p className={`truncate text-[11px] font-bold ${
+                session.role === 'Admin'
+                  ? 'text-purple-600'
+                  : session.role === 'Agent'
+                  ? 'text-emerald-600'
+                  : 'text-primary-600'
+              }`}>
+                {getWorkspaceTitle(session.role)}
+              </p>
             </div>
           </div>
           <button
@@ -231,15 +293,19 @@ function App() {
                       <li key={page}>
                         <button
                           aria-current={active ? 'page' : undefined}
-                          className={`group flex min-h-9 w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left text-[13px] font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
+                          className={`group flex min-h-9 w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
                             active
-                              ? 'bg-secondary-100 text-secondary-950'
+                              ? session.role === 'Admin'
+                                ? 'bg-purple-50 text-purple-900 font-semibold'
+                                : session.role === 'Agent'
+                                ? 'bg-emerald-50 text-emerald-900 font-semibold'
+                                : 'bg-secondary-100 text-secondary-950 font-semibold'
                               : 'text-secondary-600 hover:bg-secondary-50 hover:text-secondary-950'
                           }`}
                           onClick={() => goTo(page)}
                           type="button"
                         >
-                          <span className={active ? 'text-primary-600' : 'text-secondary-400 group-hover:text-secondary-600'}>
+                          <span className={active ? (session.role === 'Admin' ? 'text-purple-600' : session.role === 'Agent' ? 'text-emerald-600' : 'text-primary-600') : 'text-secondary-400 group-hover:text-secondary-600'}>
                             <NavIcon page={page} />
                           </span>
                           <span className="flex-1 truncate">{page}</span>
@@ -262,7 +328,13 @@ function App() {
 
           <div className="mt-4 border-t border-secondary-200/80 pt-3 lg:mt-0">
             <div className="flex items-center gap-2.5 rounded-lg px-2 py-1.5">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary-100 text-[11px] font-bold text-secondary-600">
+              <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
+                session.role === 'Admin'
+                  ? 'bg-purple-100 text-purple-700'
+                  : session.role === 'Agent'
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : 'bg-secondary-100 text-secondary-600'
+              }`}>
                 {initials(session)}
               </span>
               <div className="min-w-0 flex-1">
@@ -272,16 +344,28 @@ function App() {
             </div>
 
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5 px-2">
-              <span className="inline-flex rounded-md bg-secondary-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary-500">
-                {session.role ?? 'Student'}
-              </span>
-              <button
-                className="inline-flex rounded-md bg-primary-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-700 transition hover:bg-primary-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-                onClick={() => goTo('Plans')}
-                type="button"
-              >
-                {subscription?.tier ?? 'Free'}
-              </button>
+              {session.role === 'Admin' ? (
+                <span className="inline-flex rounded-md bg-purple-100 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-purple-700">
+                  Super Admin
+                </span>
+              ) : session.role === 'Agent' ? (
+                <span className="inline-flex rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-emerald-700">
+                  Country Agent
+                </span>
+              ) : (
+                <>
+                  <span className="inline-flex rounded-md bg-secondary-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary-500">
+                    Student
+                  </span>
+                  <button
+                    className="inline-flex rounded-md bg-primary-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-700 transition hover:bg-primary-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                    onClick={() => goTo('Plans')}
+                    type="button"
+                  >
+                    {subscription?.tier ?? 'Free'}
+                  </button>
+                </>
+              )}
             </div>
 
             <button
@@ -300,20 +384,7 @@ function App() {
       </aside>
 
       <main className="p-4 sm:p-6 lg:p-8 xl:p-10">
-        {isLocked(activePage) ? (
-          <LockedFeature
-            onUpgrade={() => goTo('Plans')}
-            page={activePage}
-            requiredTier={FEATURE_TIER[PAGE_FEATURE[activePage]] ?? 'Pro'}
-          />
-        ) : (
-          <ActivePage
-            onNavigate={goTo}
-            onSubscriptionChange={loadSubscription}
-            session={session}
-            subscription={subscription}
-          />
-        )}
+        {renderActiveContent()}
       </main>
     </div>
   )
