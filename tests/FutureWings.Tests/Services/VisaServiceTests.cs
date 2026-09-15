@@ -39,6 +39,17 @@ public sealed class VisaServiceTests
     }
 
     [Fact]
+    public void PriorRefusal_IncreasesPreparationRisk()
+    {
+        var request = ReadyRequest();
+        var withoutRefusal = VisaRiskCalculator.Calculate(request).RiskScore;
+        request.HasPriorVisaRefusal = true;
+        var withRefusal = VisaRiskCalculator.Calculate(request);
+        Assert.True(withRefusal.RiskScore > withoutRefusal);
+        Assert.Contains(withRefusal.Recommendations, item => item.Contains("Disclose the refusal"));
+    }
+
+    [Fact]
     public void MissingEvidenceAndShortFunds_AreHighRiskAndActionable()
     {
         var request = ReadyRequest();
