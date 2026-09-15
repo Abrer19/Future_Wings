@@ -79,7 +79,17 @@ function App() {
       .catch(() => setSubscription({ tier: 'Free', features: [] }))
   }, [session])
 
-  useEffect(() => { loadSubscription() }, [loadSubscription])
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      clearSession()
+      setSession(null)
+      setSubscription(null)
+      setActivePage('Login')
+      setMenuOpen(false)
+    }
+    window.addEventListener('futurewings:unauthorized', handleUnauthorized)
+    return () => window.removeEventListener('futurewings:unauthorized', handleUnauthorized)
+  }, [])
 
   // Below lg the nav is a collapsible drawer; Escape closes it and returns focus to
   // the control that opened it so keyboard users are never stranded inside it.
