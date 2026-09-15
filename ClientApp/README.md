@@ -30,6 +30,18 @@ database, migrations, and the required JWT secret.
 
 There is no test runner configured yet.
 
+## Visa Check
+
+The signed-in Visa Check page offers a four-step assessment of destination,
+funding, language evidence, and visa history. Selecting a tracked application
+loads its saved program destination and tuition. The application report link uses
+`GET /api/visa/application/{id}/risk`; submitting the form uses
+`POST /api/visa/evaluate`. The live meter is provisional while inputs change;
+the API report supplies the final risk score and personalized checklist.
+
+Evidence entered here is not persisted. A tracked application report reflects
+saved program/profile information and marks missing visa evidence as a gap.
+
 ## Layout
 
 ```

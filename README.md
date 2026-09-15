@@ -114,7 +114,7 @@ $$\text{Domain} \longleftarrow \text{Application} \longleftarrow \text{Infrastru
 | **Admin Operations** | ✅ Complete | User management, role elevation & demotion guards, platform telemetry |
 | **Community & Reviews** | ⏳ In Progress | University review ratings and feedback |
 | **Scholarships Directory** | ⏳ In Progress | International funding search and deadline link |
-| **Visa Risk Assessment** | ⏳ In Progress | Risk evaluation checklist and country readiness score |
+| **Visa Risk Assessment** | ✅ Implemented | Owner-scoped application report and interactive evidence checklist |
 
 ---
 
