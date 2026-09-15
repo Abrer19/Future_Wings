@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace FutureWings.Application.DTOs.Visa;
 
-public sealed class VisaAssessmentRequestDto
+public sealed class VisaAssessmentRequestDto : IValidatableObject
 {
     [Required, StringLength(100, MinimumLength = 2)]
     public string DestinationCountry { get; set; } = string.Empty;
@@ -35,4 +35,14 @@ public sealed class VisaAssessmentRequestDto
 
     [Range(1, int.MaxValue)]
     public int? ApplicationId { get; set; }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (!HasLanguageScore && IeltsOverallScore.HasValue)
+            yield return new ValidationResult("A language score requires language test evidence.", [nameof(IeltsOverallScore)]);
+        if (string.IsNullOrWhiteSpace(DestinationCountry))
+            yield return new ValidationResult("Destination country is required.", [nameof(DestinationCountry)]);
+        if (string.IsNullOrWhiteSpace(DegreeLevel))
+            yield return new ValidationResult("Degree level is required.", [nameof(DegreeLevel)]);
+    }
 }
