@@ -122,6 +122,16 @@ public sealed class VisaServiceTests
         Assert.Contains(report.Reasons, reason => reason.Contains("tuition and living", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public async Task Evaluation_RejectsCountryMismatchForTrackedApplication()
+    {
+        await using var context = CreateContext();
+        SeedApplication(context);
+        var request = ReadyRequest(); request.ApplicationId = 1;
+        request.DestinationCountry = "Australia";
+        await Assert.ThrowsAsync<ArgumentException>(() => new VisaService(context).EvaluateRiskAsync(1, request));
+    }
+
     private static FutureWingsDbContext CreateContext() => new(
         new DbContextOptionsBuilder<FutureWingsDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
