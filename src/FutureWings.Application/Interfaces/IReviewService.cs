@@ -4,6 +4,6 @@ namespace FutureWings.Application.Interfaces;
 
 public interface IReviewService
 {
-    Task AddReviewAsync(ReviewDto request);
-    Task<IReadOnlyList<ReviewDto>> GetUniversityReviewsAsync(int universityId);
+    Task<ReviewDto> AddReviewAsync(int userId, ReviewCreateDto request);
+    Task<IReadOnlyList<ReviewDto>> GetUniversityReviewsAsync(int universityId, int currentUserId);
 }
