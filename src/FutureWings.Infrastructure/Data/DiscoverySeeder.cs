@@ -240,20 +240,25 @@ public static class DiscoverySeeder
             ("FI", "Finland Scholarship for Master's Degrees")
         };
 
-        foreach (var (countryCode, name) in scholarshipSeeds)
+        for (var index = 0; index < scholarshipSeeds.Length; index++)
         {
+            var (countryCode, name) = scholarshipSeeds[index];
             var country = await context.Countries.SingleOrDefaultAsync(c => c.Code == countryCode);
             if (country is null) continue;
 
             var existing = await context.Scholarships.SingleOrDefaultAsync(s => s.Name == name && s.CountryId == country.Id);
             if (existing is null)
             {
-                context.Scholarships.Add(new Scholarship
+                existing = new Scholarship
                 {
                     Name = name,
                     CountryId = country.Id
-                });
+                };
+                context.Scholarships.Add(existing);
             }
+            existing.EligibilityCriteria = "International applicants with strong academic achievement, leadership potential, and admission to an eligible program.";
+            existing.AwardAmount = 10_000m + index % 6 * 5_000m;
+            existing.Deadline = new DateTimeOffset(2027, 1 + index % 11, 15, 23, 59, 0, TimeSpan.Zero);
         }
         await context.SaveChangesAsync();
     }
