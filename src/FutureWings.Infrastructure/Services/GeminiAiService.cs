@@ -75,7 +75,7 @@ public class GeminiAiService(HttpClient httpClient, IConfiguration configuration
         var model = _configuration["GeminiApi:Model"];
         if (string.IsNullOrWhiteSpace(model) || model.StartsWith("replace-with", StringComparison.OrdinalIgnoreCase))
         {
-            model = "gemini-2.0-flash";
+            model = "gemini-2.5-flash";
         }
 
         using var request = new HttpRequestMessage(HttpMethod.Post, BuildGenerateContentUri(model));
