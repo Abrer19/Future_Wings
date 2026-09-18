@@ -4,7 +4,7 @@ import { CloseIcon, LogoMark, MenuIcon } from './icons.jsx'
 const links = [
   { label: 'Home', href: '#home' },
   { label: 'About', href: '#features' },
-  { label: 'News', href: '#destinations' },
+  { label: 'News', href: '#news' },
   { label: 'Contact', href: '#contact' },
 ]
 
