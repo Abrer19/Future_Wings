@@ -12,6 +12,9 @@ const tierStyles = {
 export default function Destinations({ onViewDestination }) {
   const articleFromHash = () => destinationArticles.find((article) => window.location.hash === `#news/${article.slug}`) ?? null
   const [selectedArticle, setSelectedArticle] = useState(articleFromHash)
+  const [search, setSearch] = useState('')
+  const visibleArticles = destinationArticles.filter((article) =>
+    `${article.name} ${article.headline} ${article.description}`.toLowerCase().includes(search.trim().toLowerCase()))
 
   useEffect(() => {
     const syncArticle = () => setSelectedArticle(articleFromHash())
@@ -46,8 +49,14 @@ export default function Destinations({ onViewDestination }) {
           title="Study Abroad News & Destination Guides"
         />
 
+        <div className="mx-auto mt-8 max-w-xl">
+          <label className="sr-only" htmlFor="news-search">Search destination articles</label>
+          <input className="w-full rounded-xl border border-secondary-200 bg-white px-4 py-3 text-sm text-secondary-950 shadow-sm outline-none transition placeholder:text-secondary-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20" id="news-search" onChange={(event) => setSearch(event.target.value)} placeholder="Search news by country or topic" type="search" value={search} />
+          <p aria-live="polite" className="mt-2 text-center text-xs text-secondary-400">{visibleArticles.length} article{visibleArticles.length === 1 ? '' : 's'} available</p>
+        </div>
+
         <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {destinationArticles.map((article) => (
+          {visibleArticles.map((article) => (
             <li
               className="group overflow-hidden rounded-2xl border border-secondary-500/10 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-primary-500/30 hover:shadow-md"
               key={article.slug}
@@ -57,6 +66,7 @@ export default function Destinations({ onViewDestination }) {
             </li>
           ))}
         </ul>
+        {visibleArticles.length === 0 && <div className="mt-10 rounded-2xl border border-dashed border-secondary-300 bg-white px-6 py-12 text-center"><p className="font-semibold text-secondary-950">No articles match that search.</p><button className="mt-3 rounded-lg px-3 py-2 text-sm font-semibold text-primary-600 hover:bg-primary-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500" onClick={() => setSearch('')} type="button">Clear search</button></div>}
       </div>
       </section>
       {selectedArticle && <DestinationArticle article={selectedArticle} onClose={closeArticle} onExplore={(name) => { closeArticle(); onViewDestination?.(name) }} />}
