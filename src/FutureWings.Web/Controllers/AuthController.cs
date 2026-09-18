@@ -2,6 +2,7 @@ using FutureWings.Application.DTOs.Auth;
 using FutureWings.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace FutureWings.Web.Controllers;
@@ -20,6 +21,11 @@ public class AuthController(IAuthService authService) : ControllerBase
         catch (InvalidOperationException exception)
         {
             return Conflict(new { message = exception.Message });
+        }
+        catch (DbUpdateException)
+        {
+            // The unique email index is the final guard for simultaneous registrations.
+            return Conflict(new { message = "An account with this email already exists." });
         }
     }
 
