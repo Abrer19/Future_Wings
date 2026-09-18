@@ -4,5 +4,6 @@ namespace FutureWings.Application.Interfaces;
 
 public interface IVisaService
 {
-    Task<VisaRiskResultDto> GetRiskAsync(int applicationId);
+    Task<VisaRiskResultDto> EvaluateRiskAsync(int userId, VisaAssessmentRequestDto request);
+    Task<VisaRiskResultDto?> GetRiskForApplicationAsync(int userId, int applicationId);
 }

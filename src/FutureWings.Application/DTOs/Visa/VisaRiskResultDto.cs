@@ -6,4 +6,5 @@ public class VisaRiskResultDto
     public decimal RiskScore { get; set; }
     public string RiskLevel { get; set; } = string.Empty;
     public IReadOnlyList<string> Reasons { get; set; } = [];
+    public IReadOnlyList<string> Recommendations { get; set; } = [];
 }
