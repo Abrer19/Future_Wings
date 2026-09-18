@@ -162,25 +162,19 @@ function App() {
   if (!session) {
     if (activePage !== 'Login' && activePage !== 'Register') {
       return (
-        <>
-          <Home
-            onExploreCountries={() => setActivePage('Register')}
-            onGetRecommendations={() => setActivePage('Register')}
-            onSignIn={() => setActivePage('Login')}
-            onSignUp={() => setActivePage('Register')}
-            onViewDestination={() => setActivePage('Register')}
-          />
-          <ChatbotWidget onSignIn={() => setActivePage('Login')} session={session} />
-        </>
+        <Home
+          onExploreCountries={() => setActivePage('Register')}
+          onGetRecommendations={() => setActivePage('Register')}
+          onSignIn={() => setActivePage('Login')}
+          onSignUp={() => setActivePage('Register')}
+          onViewDestination={() => setActivePage('Register')}
+        />
       )
     }
 
     const AuthPage = activePage === 'Register' ? Register : Login
     return (
-      <>
-        <AuthPage onAuthenticated={handleAuthenticated} onNavigate={() => setActivePage(activePage === 'Register' ? 'Login' : 'Register')} />
-        <ChatbotWidget onSignIn={() => setActivePage('Login')} session={session} />
-      </>
+      <AuthPage onAuthenticated={handleAuthenticated} onNavigate={() => setActivePage(activePage === 'Register' ? 'Login' : 'Register')} />
     )
   }
 
