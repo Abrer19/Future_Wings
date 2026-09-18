@@ -138,7 +138,14 @@ public sealed class FutureWingsDbContext(DbContextOptions<FutureWingsDbContext> 
             entity.HasIndex(saved => saved.ProgramId);
         });
 
-        modelBuilder.Entity<Scholarship>().HasKey(scholarship => scholarship.Id);
+        modelBuilder.Entity<Scholarship>(entity =>
+        {
+            entity.HasKey(scholarship => scholarship.Id);
+            entity.Property(scholarship => scholarship.Name).HasMaxLength(200);
+            entity.Property(scholarship => scholarship.EligibilityCriteria).HasMaxLength(1000);
+            entity.Property(scholarship => scholarship.AwardAmount).HasPrecision(12, 2);
+            entity.HasIndex(scholarship => new { scholarship.CountryId, scholarship.Name }).IsUnique();
+        });
 
         modelBuilder.Entity<DomainApplication>(entity =>
         {

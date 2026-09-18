@@ -335,7 +335,8 @@ public sealed class AgentService(FutureWingsDbContext context) : IAgentService
         var scholarship = new Scholarship
         {
             CountryId = dto.CountryId,
-            Name = dto.Name.Trim()
+            Name = dto.Name.Trim(),
+            EligibilityCriteria = "Eligibility details will be published by the scholarship provider.",
         };
         context.Scholarships.Add(scholarship);
         await context.SaveChangesAsync();
