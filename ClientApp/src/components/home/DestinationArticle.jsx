@@ -4,6 +4,7 @@ import { ArrowRightIcon, CloseIcon } from './icons.jsx'
 export default function DestinationArticle({ article, onClose, onExplore }) {
   const closeRef = useRef(null)
   const [progress, setProgress] = useState(0)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow
@@ -19,12 +20,18 @@ export default function DestinationArticle({ article, onClose, onExplore }) {
     setProgress(scrollHeight <= clientHeight ? 100 : Math.min(100, Math.round(scrollTop / (scrollHeight - clientHeight) * 100)))
   }
 
+  const copyLink = async () => {
+    await navigator.clipboard.writeText(window.location.href)
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 2000)
+  }
+
   return <div className="fixed inset-0 z-50 overflow-y-auto bg-secondary-950/70 p-0 backdrop-blur-sm sm:p-6" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }} onScroll={updateProgress} role="presentation">
     <div aria-hidden="true" className="fixed inset-x-0 top-0 z-[60] h-1 bg-white/15"><div className="h-full bg-primary-500 transition-[width] duration-150" style={{ width: `${progress}%` }} /></div>
     <article aria-labelledby="article-title" aria-modal="true" className="mx-auto min-h-screen max-w-4xl bg-[#fffdfa] shadow-2xl sm:min-h-0 sm:rounded-2xl" role="dialog">
       <header className="relative overflow-hidden border-b border-secondary-200 bg-secondary-950 px-6 py-10 text-white sm:px-12 sm:py-14">
         <div className="absolute -right-10 -top-16 text-[13rem] opacity-10" aria-hidden="true">{article.flag}</div>
-        <button aria-label="Close article" className="absolute right-4 top-4 z-10 rounded-full bg-white/10 p-2 transition hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white" onClick={onClose} ref={closeRef} type="button"><CloseIcon /></button>
+        <div className="absolute right-4 top-4 z-10 flex items-center gap-2"><button className="rounded-full bg-white/10 px-3 py-2 text-xs font-semibold transition hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white" onClick={copyLink} type="button">{copied ? 'Link copied' : 'Copy link'}</button><button aria-label="Close article" className="rounded-full bg-white/10 p-2 transition hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white" onClick={onClose} ref={closeRef} type="button"><CloseIcon /></button></div>
         <div className="relative max-w-3xl"><p className="text-xs font-bold uppercase tracking-[0.2em] text-primary-300">FutureWings destination report · {article.tier}</p><h1 className="mt-5 font-serif text-4xl font-bold leading-tight sm:text-6xl" id="article-title">{article.headline}</h1><p className="mt-5 max-w-2xl text-lg leading-8 text-secondary-200">{article.standfirst}</p><div className="mt-7 flex flex-wrap gap-4 text-xs font-semibold uppercase tracking-wider text-secondary-300"><span>{article.updated}</span><span aria-hidden="true">•</span><span>{article.readTime}</span></div></div>
       </header>
 
