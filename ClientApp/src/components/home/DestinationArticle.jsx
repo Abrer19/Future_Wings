@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowRightIcon, CloseIcon } from './icons.jsx'
 
 export default function DestinationArticle({ article, onClose, onExplore }) {
   const closeRef = useRef(null)
+  const [progress, setProgress] = useState(0)
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow
@@ -13,7 +14,13 @@ export default function DestinationArticle({ article, onClose, onExplore }) {
     return () => { document.body.style.overflow = previousOverflow; document.removeEventListener('keydown', handleKeyDown) }
   }, [onClose])
 
-  return <div className="fixed inset-0 z-50 overflow-y-auto bg-secondary-950/70 p-0 backdrop-blur-sm sm:p-6" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }} role="presentation">
+  const updateProgress = (event) => {
+    const { scrollHeight, scrollTop, clientHeight } = event.currentTarget
+    setProgress(scrollHeight <= clientHeight ? 100 : Math.min(100, Math.round(scrollTop / (scrollHeight - clientHeight) * 100)))
+  }
+
+  return <div className="fixed inset-0 z-50 overflow-y-auto bg-secondary-950/70 p-0 backdrop-blur-sm sm:p-6" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }} onScroll={updateProgress} role="presentation">
+    <div aria-hidden="true" className="fixed inset-x-0 top-0 z-[60] h-1 bg-white/15"><div className="h-full bg-primary-500 transition-[width] duration-150" style={{ width: `${progress}%` }} /></div>
     <article aria-labelledby="article-title" aria-modal="true" className="mx-auto min-h-screen max-w-4xl bg-[#fffdfa] shadow-2xl sm:min-h-0 sm:rounded-2xl" role="dialog">
       <header className="relative overflow-hidden border-b border-secondary-200 bg-secondary-950 px-6 py-10 text-white sm:px-12 sm:py-14">
         <div className="absolute -right-10 -top-16 text-[13rem] opacity-10" aria-hidden="true">{article.flag}</div>
