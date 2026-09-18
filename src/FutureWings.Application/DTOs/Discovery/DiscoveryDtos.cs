@@ -12,6 +12,7 @@ public sealed class DiscoveryCountryDto
 public sealed class DiscoveryProgramDto
 {
     public int Id { get; init; }
+    public int UniversityId { get; init; }
     public string Name { get; init; } = string.Empty;
     public string University { get; init; } = string.Empty;
     public string Country { get; init; } = string.Empty;
