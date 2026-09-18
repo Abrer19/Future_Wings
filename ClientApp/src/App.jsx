@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiRequest, clearSession, loadSession, saveSession } from './auth.js'
+import ChatbotWidget from './components/ui/ChatbotWidget.jsx'
 import LockedFeature from './components/ui/LockedFeature.jsx'
 import NavIcon from './components/ui/navIcons.jsx'
 import Admin from './pages/Admin.jsx'
@@ -161,18 +162,26 @@ function App() {
   if (!session) {
     if (activePage !== 'Login' && activePage !== 'Register') {
       return (
-        <Home
-          onExploreCountries={() => setActivePage('Register')}
-          onGetRecommendations={() => setActivePage('Register')}
-          onSignIn={() => setActivePage('Login')}
-          onSignUp={() => setActivePage('Register')}
-          onViewDestination={() => setActivePage('Register')}
-        />
+        <>
+          <Home
+            onExploreCountries={() => setActivePage('Register')}
+            onGetRecommendations={() => setActivePage('Register')}
+            onSignIn={() => setActivePage('Login')}
+            onSignUp={() => setActivePage('Register')}
+            onViewDestination={() => setActivePage('Register')}
+          />
+          <ChatbotWidget onSignIn={() => setActivePage('Login')} session={session} />
+        </>
       )
     }
 
     const AuthPage = activePage === 'Register' ? Register : Login
-    return <AuthPage onAuthenticated={handleAuthenticated} onNavigate={() => setActivePage(activePage === 'Register' ? 'Login' : 'Register')} />
+    return (
+      <>
+        <AuthPage onAuthenticated={handleAuthenticated} onNavigate={() => setActivePage(activePage === 'Register' ? 'Login' : 'Register')} />
+        <ChatbotWidget onSignIn={() => setActivePage('Login')} session={session} />
+      </>
+    )
   }
 
   const role = session.role === 'Admin' || session.role === 'Agent' ? session.role : 'Student'
@@ -390,6 +399,7 @@ function App() {
       <main className="p-4 sm:p-6 lg:p-8 xl:p-10">
         {renderActiveContent()}
       </main>
+      <ChatbotWidget session={session} />
     </div>
   )
 }
