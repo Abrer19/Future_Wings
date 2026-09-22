@@ -12,13 +12,12 @@ import { CloseIcon } from '../components/dashboard/icons.jsx'
 const emptyForm = { title: '', category: 'Application', dueAt: '', notes: '' }
 const filters = ['Active', 'Overdue', 'Completed']
 
-/** "now" in the local format a datetime-local input expects (no timezone shift). */
 function toLocalInputValue(date) {
   const pad = (value) => String(value).padStart(2, '0')
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
-export default function Dashboard({ session }) {
+export default function Dashboard({ session, onNavigate }) {
   const [deadlines, setDeadlines] = useState([])
   const [form, setForm] = useState(emptyForm)
   const [filter, setFilter] = useState('Active')
@@ -27,8 +26,6 @@ export default function Dashboard({ session }) {
   const [error, setError] = useState('')
   const [now, setNow] = useState(Date.now)
 
-  // Per-row in-flight guard, mirroring Discovery.jsx's `savingIds`. Without it a
-  // double-click sends two DELETEs and the second 404 surfaces as a false error.
   const [pendingIds, setPendingIds] = useState(() => new Set())
   const [toast, setToast] = useState('')
   const [justAddedId, setJustAddedId] = useState(null)
@@ -130,25 +127,60 @@ export default function Dashboard({ session }) {
     }
   }
 
+  const completionRate = deadlines.length
+    ? Math.round((counts.completed / deadlines.length) * 100)
+    : 0
+
+  const todayFormatted = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  })
+
   return (
-    <div className="mx-auto max-w-6xl">
-      <header className="mb-8">
-        <p className="text-sm font-semibold uppercase tracking-wide text-primary-600">Dashboard</p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight text-secondary-950">Upcoming deadlines</h1>
-        <p className="mt-2 text-secondary-500">
-          Keep applications, scholarships, tests, and visa tasks on schedule.
-        </p>
+    <div className="mx-auto max-w-6xl space-y-8 pb-16">
+      {/* Personalized Welcome Header Banner */}
+      <header className="relative overflow-hidden rounded-3xl border border-secondary-200 bg-gradient-to-r from-secondary-950 via-secondary-900 to-secondary-950 p-6 sm:p-8 text-white shadow-xl">
+        <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary-500/15 blur-3xl" />
+        <div className="flex flex-wrap items-center justify-between gap-6 relative z-10">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1.5 rounded-full bg-primary-500/20 border border-primary-400/30 px-3 py-0.5 text-xs font-bold uppercase tracking-wider text-primary-300">
+                <span className="h-2 w-2 rounded-full bg-primary-400 animate-pulse" />
+                Student Workspace
+              </span>
+              <span className="text-xs text-secondary-400 font-medium">{todayFormatted}</span>
+            </div>
+            <h1 className="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-white">
+              Welcome back, {session.firstName || 'Student'}!
+            </h1>
+            <p className="mt-1 text-xs sm:text-sm text-secondary-300 max-w-xl">
+              Keep your admissions, language exams, visa checkpoints, and scholarship milestones on track.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl bg-white/10 backdrop-blur-md px-5 py-3 border border-white/15 text-center min-w-[140px]">
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-secondary-300">Milestones Done</span>
+              <div className="mt-1 flex items-baseline justify-center gap-1">
+                <span className="font-mono text-2xl font-black text-primary-400">{completionRate}%</span>
+                <span className="text-xs text-secondary-300 font-bold">({counts.completed}/{deadlines.length})</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </header>
 
-      <section aria-label="Deadline summary" className="mb-8 grid gap-4 sm:grid-cols-3">
-        <StatCard tone="active" label="Active" value={counts.active} hint="Still to do" />
-        <StatCard tone="overdue" label="Overdue" value={counts.overdue} hint="Past their due date" />
-        <StatCard tone="completed" label="Completed" value={counts.completed} hint="Ticked off" />
+      {/* Summary KPI Cards */}
+      <section aria-label="Deadline summary" className="grid gap-4 sm:grid-cols-3">
+        <StatCard tone="active" label="Active Deadlines" value={counts.active} hint="Tasks in progress" />
+        <StatCard tone="overdue" label="Overdue Items" value={counts.overdue} hint="Requires immediate attention" />
+        <StatCard tone="completed" label="Completed Tasks" value={counts.completed} hint="Finished milestones" />
       </section>
 
       {error && (
         <div
-          className="mb-6 flex items-start justify-between gap-4 rounded-2xl border border-danger-100 bg-danger-50 px-4 py-3 text-sm text-danger-700"
+          className="flex items-start justify-between gap-4 rounded-2xl border border-danger-100 bg-danger-50 px-4 py-3 text-sm text-danger-700 shadow-sm"
           role="alert"
         >
           <span>{error}</span>
@@ -163,19 +195,18 @@ export default function Dashboard({ session }) {
         </div>
       )}
 
-      {/* Two columns from lg (1024px) — at xl the form dropped below the whole list on
-          the most common laptop widths. */}
+      {/* Main Deadline Management Grid */}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] xl:gap-8">
-        <section className={`overflow-hidden ${CARD}`}>
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-secondary-200/70 px-5 py-4">
-            <h2 className="font-bold text-secondary-950">Your deadlines</h2>
-            <div className="flex rounded-lg bg-secondary-100 p-1" role="group" aria-label="Filter deadlines">
+        <section className={`overflow-hidden rounded-3xl border border-secondary-200/80 bg-white shadow-sm`}>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-secondary-100 px-6 py-4">
+            <h2 className="font-bold text-secondary-950 text-base">Your Schedule & Milestones</h2>
+            <div className="flex rounded-xl bg-secondary-100 p-1" role="group" aria-label="Filter deadlines">
               {filters.map((option) => (
                 <button
                   aria-pressed={filter === option}
-                  className={`min-h-9 rounded-lg px-3.5 py-2 text-xs font-semibold transition sm:py-1.5 ${FOCUS} ${
+                  className={`min-h-9 rounded-lg px-3.5 py-1.5 text-xs font-bold transition ${FOCUS} ${
                     filter === option
-                      ? 'bg-white text-secondary-950 shadow-[0_1px_2px_rgba(27,36,50,0.10)]'
+                      ? 'bg-white text-secondary-950 shadow-sm'
                       : 'text-secondary-500 hover:text-secondary-800'
                   }`}
                   key={option}

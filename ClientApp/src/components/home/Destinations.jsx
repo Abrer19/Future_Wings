@@ -1,58 +1,109 @@
 import SectionHeading from './SectionHeading.jsx'
 import { ArrowRightIcon } from './icons.jsx'
 
-const tierStyles = {
-  'Tier 1': 'bg-primary-500/10 text-primary-500',
-  'Tier 2': 'bg-warning/15 text-warning-700',
-}
-
 const destinations = [
-  { name: 'United States', tier: 'Tier 1', description: 'Top-ranked universities worldwide' },
-  { name: 'United Kingdom', tier: 'Tier 1', description: 'World-class education heritage' },
-  { name: 'Canada', tier: 'Tier 1', description: 'Inclusive and affordable options' },
-  { name: 'Germany', tier: 'Tier 2', description: 'Low-tuition STEM powerhouse' },
-  { name: 'Australia', tier: 'Tier 1', description: 'High quality of life & research' },
-  { name: 'Japan', tier: 'Tier 2', description: 'Innovation meets tradition' },
+  {
+    name: 'United States',
+    tier: 'Tier 1 Global Ivy',
+    avgCost: '$25k – $55k/yr',
+    workRights: 'OPT 1–3 Years',
+    highlight: 'World-renowned research labs, Silicon Valley networks & STEM OPT.',
+  },
+  {
+    name: 'United Kingdom',
+    tier: 'Tier 1 Heritage',
+    avgCost: '£14k – £32k/yr',
+    workRights: '2-Yr Graduate Route',
+    highlight: '1-Year accelerated Master’s programs and historic Russell Group universities.',
+  },
+  {
+    name: 'Canada',
+    tier: 'Tier 1 Immigration',
+    avgCost: 'CAD $18k – $38k/yr',
+    workRights: '3-Yr PGWP Available',
+    highlight: 'Clear post-graduation work permits, welcoming culture, and top co-op programs.',
+  },
+  {
+    name: 'Germany',
+    tier: 'Tier 2 Low Tuition',
+    avgCost: '€0 – €3k/yr',
+    workRights: '18-Mo Job Seeker',
+    highlight: 'Virtually zero tuition fees at world-class public technical universities (TU9).',
+  },
+  {
+    name: 'Australia',
+    tier: 'Tier 1 Quality of Life',
+    avgCost: 'AUD $28k – $46k/yr',
+    workRights: '2–4 Yr Post-Study',
+    highlight: 'High minimum wages, Group of Eight prestige, and generous regional visa perks.',
+  },
+  {
+    name: 'Japan',
+    tier: 'Tier 2 High Tech',
+    avgCost: '$5k – $15k/yr',
+    workRights: 'Designated Visa Track',
+    highlight: 'Generous MEXT government scholarships, cutting-edge robotics and AI engineering.',
+  },
 ]
 
 export default function Destinations({ onViewDestination }) {
   return (
     <section
       aria-labelledby="destinations-title"
-      className="bg-surface py-20 sm:py-24"
+      className="bg-white py-20 sm:py-28 relative"
       id="destinations"
     >
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <SectionHeading
-          badge="Destinations"
-          badgeClassName="bg-success/10 text-success"
-          description="Explore top-rated countries chosen by thousands of students."
+          badge="Global Destinations"
+          badgeClassName="bg-primary-100 text-primary-800"
+          description="Explore high-demand destination countries with clear admission tracks and post-study opportunities."
           id="destinations-title"
-          title="Popular Destinations"
+          title="Top International Study Destinations"
         />
 
-        <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {destinations.map(({ name, tier, description }) => (
+        <ul className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {destinations.map(({ name, tier, avgCost, workRights, highlight }) => (
             <li
-              className="rounded-2xl border border-secondary-500/10 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-500/30 hover:shadow-md"
+              className="group rounded-3xl border border-secondary-200/80 bg-surface p-6 shadow-sm transition duration-300 hover:-translate-y-1.5 hover:border-primary-300 hover:shadow-xl hover:bg-white flex flex-col justify-between"
               key={name}
             >
-              <h3 className="text-base font-bold text-secondary-950">{name}</h3>
-              <span
-                className={`mt-2 inline-flex rounded-md px-2 py-0.5 text-[11px] font-bold ${tierStyles[tier]}`}
-              >
-                {tier}
-              </span>
-              <p className="mt-3 text-sm leading-6 text-secondary-500">{description}</p>
-              <button
-                className="mt-4 inline-flex items-center gap-1.5 rounded text-sm font-semibold text-primary-500 transition hover:text-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
-                onClick={() => onViewDestination?.(name)}
-                type="button"
-              >
-                View Details
-                <span className="sr-only"> for {name}</span>
-                <ArrowRightIcon className="h-3.5 w-3.5" />
-              </button>
+              <div>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-extrabold text-secondary-950 group-hover:text-primary-600 transition">
+                    {name}
+                  </h3>
+                  <span className="rounded-lg bg-primary-50 border border-primary-200 px-2.5 py-0.5 text-[10px] font-bold text-primary-800">
+                    {tier}
+                  </span>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-2 text-[11px] font-semibold text-secondary-600">
+                  <div className="rounded-xl bg-white border border-secondary-200/70 p-2.5">
+                    <span className="block text-[10px] text-secondary-400 uppercase font-bold">Avg. Tuition</span>
+                    <span className="text-secondary-900 font-bold">{avgCost}</span>
+                  </div>
+                  <div className="rounded-xl bg-white border border-secondary-200/70 p-2.5">
+                    <span className="block text-[10px] text-secondary-400 uppercase font-bold">Post-Study Visa</span>
+                    <span className="text-secondary-900 font-bold">{workRights}</span>
+                  </div>
+                </div>
+
+                <p className="mt-4 text-xs leading-relaxed text-secondary-500">
+                  {highlight}
+                </p>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-secondary-200/60 flex items-center justify-between">
+                <button
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-primary-600 hover:text-primary-700 transition"
+                  onClick={() => onViewDestination?.(name)}
+                  type="button"
+                >
+                  <span>Explore Universities</span>
+                  <ArrowRightIcon className="h-3.5 w-3.5 transition group-hover:translate-x-1" />
+                </button>
+              </div>
             </li>
           ))}
         </ul>

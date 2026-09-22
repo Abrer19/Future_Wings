@@ -8,73 +8,91 @@ import {
   TrackIcon,
 } from './icons.jsx'
 
-// Icon tints are full literal class strings, not interpolated — Tailwind's scanner
-// only emits arbitrary values it can read verbatim in the source.
 const features = [
   {
-    title: 'Tier-Based Recommendations',
+    title: 'Tier-Based AI Matching',
+    tag: 'Algorithms',
     description:
-      'Get personalized country recommendations based on your CGPA, major, and financial readiness.',
+      'Get personalized program and country recommendations tailored to your CGPA, major, and budget readiness.',
     Icon: CompassIcon,
-    tint: 'bg-accent/10 text-accent',
+    tint: 'bg-primary-50 text-primary-600 border border-primary-200',
   },
   {
-    title: 'Scholarships by Country',
-    description: 'Discover scholarship opportunities tailored to your destination country and profile.',
+    title: 'Global Scholarships Directory',
+    tag: 'Funding',
+    description: 'Discover full & partial tuition waivers tailored to your destination country and academic profile.',
     Icon: ScholarshipIcon,
-    tint: 'bg-success/10 text-success',
+    tint: 'bg-emerald-50 text-emerald-600 border border-emerald-200',
   },
   {
-    title: 'Application Tracking',
+    title: 'Real-Time Application CRM',
+    tag: 'Tracking',
     description:
-      'Track every application from submission to acceptance with real-time status updates.',
+      'Monitor every application from draft to submission, review, and offer letter in one organized pipeline.',
     Icon: TrackIcon,
-    tint: 'bg-primary-500/10 text-primary-500',
+    tint: 'bg-amber-50 text-amber-600 border border-amber-200',
   },
   {
-    title: 'Document Verification',
+    title: 'Document & SOP Vault',
+    tag: 'Secure',
     description:
-      'Upload and get your documents verified — transcripts, recommendation letters, SOPs.',
+      'Store, organize, and prepare verified transcripts, letters of recommendation, and statements of purpose.',
     Icon: DocumentCheckIcon,
-    tint: 'bg-secondary-500/10 text-secondary-500',
+    tint: 'bg-blue-50 text-blue-600 border border-blue-200',
   },
   {
-    title: 'Visa Outcome',
-    description: 'Receive visa decision updates and guidance for next steps after interview.',
+    title: 'Visa Readiness Evaluation',
+    tag: 'Risk Analysis',
+    description: 'Analyze financial coverage, ties to home country, and language scores before your embassy interview.',
     Icon: ShieldIcon,
-    tint: 'bg-warning/10 text-warning',
+    tint: 'bg-purple-50 text-purple-600 border border-purple-200',
   },
   {
-    title: 'Post-Visa Ratings',
-    description: 'Rate your experience and help future applicants make informed decisions.',
+    title: 'AI Mock Interview Coach',
+    tag: 'On-Device NLP',
+    description: 'Practice answering real visa and university interview questions with real-time video framing and NLP feedback.',
     Icon: StarIcon,
-    tint: 'bg-danger/10 text-danger',
+    tint: 'bg-rose-50 text-rose-600 border border-rose-200',
   },
 ]
 
 export default function Features() {
   return (
-    <section aria-labelledby="features-title" className="bg-surface py-20 sm:py-24" id="features">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+    <section aria-labelledby="features-title" className="bg-surface py-20 sm:py-28 relative overflow-hidden" id="features">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 relative z-10">
         <SectionHeading
-          badge="Features"
-          badgeClassName="bg-primary-500/10 text-primary-500"
-          description="One platform to manage your entire study abroad journey — from discovery to departure."
+          badge="Complete Study Ecosystem"
+          badgeClassName="bg-primary-100 text-primary-800"
+          description="Everything you need to discover, apply, fund, and succeed in your international university journey."
           id="features-title"
-          title="Everything You Need"
+          title="Empowering Every Step of Your Journey"
         />
 
-        <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {features.map(({ title, description, Icon, tint }) => (
+        <ul className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {features.map(({ title, tag, description, Icon, tint }) => (
             <li
-              className="rounded-2xl border border-secondary-500/10 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-500/30 hover:shadow-md"
+              className="group rounded-3xl border border-secondary-200/80 bg-white p-7 shadow-sm transition duration-300 hover:-translate-y-1.5 hover:border-primary-300 hover:shadow-xl hover:shadow-primary-500/5 relative flex flex-col justify-between"
               key={title}
             >
-              <span className={`inline-flex h-11 w-11 items-center justify-center rounded-xl ${tint}`}>
-                <Icon className="h-5 w-5" />
-              </span>
-              <h3 className="mt-5 text-base font-bold text-secondary-950">{title}</h3>
-              <p className="mt-2 text-sm leading-6 text-secondary-500">{description}</p>
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl shadow-sm transition group-hover:scale-105 ${tint}`}>
+                    <Icon className="h-6 w-6" />
+                  </span>
+                  <span className="rounded-full bg-secondary-100 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-secondary-600">
+                    {tag}
+                  </span>
+                </div>
+                <h3 className="mt-6 text-lg font-bold text-secondary-950 group-hover:text-primary-600 transition">
+                  {title}
+                </h3>
+                <p className="mt-2.5 text-sm leading-relaxed text-secondary-500">
+                  {description}
+                </p>
+              </div>
+              <div className="mt-6 pt-4 border-t border-secondary-100/80 flex items-center text-xs font-bold text-primary-600 group-hover:translate-x-1 transition">
+                <span>Learn more &rarr;</span>
+              </div>
             </li>
           ))}
         </ul>

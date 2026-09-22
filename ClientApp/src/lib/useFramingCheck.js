@@ -41,7 +41,8 @@ const SAMPLE_TICK_MS = 700
 const MIN_SAMPLES = 4
 
 export function useFramingCheck() {
-  const [status, setStatus] = useState('off') // off | starting | loading-model | watching | error
+  const [status, setStatus] = useState('off') // off | starting | loading-model | watching | active | error
+  const [detectorStatus, setDetectorStatus] = useState('off') // off | loading | ready | offline
   const [error, setError] = useState('')
   const [samples, setSamples] = useState([])
   const videoRef = useRef(null)
@@ -51,14 +52,34 @@ export function useFramingCheck() {
   const busyRef = useRef(false)
 
   const stopCamera = useCallback(() => {
-    if (timerRef.current) { window.clearInterval(timerRef.current); timerRef.current = null }
-    streamRef.current?.getTracks().forEach((track) => track.stop())
-    streamRef.current = null
+    if (timerRef.current) {
+      window.clearInterval(timerRef.current)
+      timerRef.current = null
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => {
+        try {
+          track.stop()
+        } catch {
+          // ignore
+        }
+      })
+      streamRef.current = null
+    }
     busyRef.current = false
-    if (videoRef.current) videoRef.current.srcObject = null
-    detectorRef.current?.close?.()
-    detectorRef.current = null
+    if (videoRef.current) {
+      videoRef.current.srcObject = null
+    }
+    if (detectorRef.current) {
+      try {
+        detectorRef.current.close?.()
+      } catch {
+        // ignore
+      }
+      detectorRef.current = null
+    }
     setStatus('off')
+    setDetectorStatus('off')
   }, [])
 
   useEffect(() => stopCamera, [stopCamera])
@@ -67,30 +88,98 @@ export function useFramingCheck() {
     setError('')
     setSamples([])
     setStatus('starting')
+    setDetectorStatus('off')
 
+    // 1. Verify browser mediaDevices support
+    if (!navigator?.mediaDevices?.getUserMedia) {
+      setStatus('error')
+      setError(
+        window.isSecureContext === false
+          ? 'Camera access requires a secure connection (HTTPS or localhost).'
+          : 'Your browser does not support camera access (navigator.mediaDevices is unavailable).'
+      )
+      return
+    }
+
+    let stream = null
+
+    // 2. Request Camera Stream
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480 },
-        audio: false,
-      })
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+          audio: false,
+        })
+      } catch (constraintErr) {
+        // Fallback to basic video constraint if ideal constraints fail
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        })
+      }
+
       streamRef.current = stream
       const video = videoRef.current
       if (video) {
         video.srcObject = stream
+        video.onloadedmetadata = () => {
+          video.play().catch(() => {})
+        }
         await video.play().catch(() => {})
       }
 
-      setStatus('loading-model')
+      // Camera stream is now successfully active!
+      setStatus('active')
+    } catch (mediaError) {
+      setStatus('error')
+      let msg = 'Could not access the camera.'
+      if (mediaError?.name === 'NotAllowedError' || mediaError?.name === 'PermissionDeniedError') {
+        msg = 'Camera permission was denied. Please click the camera/lock icon in your browser address bar and select "Allow".'
+      } else if (mediaError?.name === 'NotFoundError' || mediaError?.name === 'DevicesNotFoundError') {
+        msg = 'No camera device was detected on your computer.'
+      } else if (mediaError?.name === 'NotReadableError' || mediaError?.name === 'TrackStartError') {
+        msg = 'Camera is in use by another application (e.g. Zoom, Teams, or another browser tab).'
+      } else if (mediaError?.name === 'OverconstrainedError') {
+        msg = 'Camera does not meet requested video resolution settings.'
+      } else if (mediaError?.message) {
+        msg = mediaError.message
+      }
+      setError(msg)
+      return
+    }
+
+    // 3. Load MediaPipe Face Detector in background with graceful fallback
+    try {
+      setDetectorStatus('loading')
       const vision = await FilesetResolver.forVisionTasks(WASM_BASE)
-      // GPU where available; MediaPipe falls back to CPU on its own if not.
-      const detector = await FaceDetector.createFromOptions(vision, {
-        baseOptions: { modelAssetPath: MODEL_URL, delegate: 'GPU' },
-        runningMode: 'VIDEO',
-        minDetectionConfidence: 0.5,
-      })
+      
+      let detector = null
+      try {
+        detector = await FaceDetector.createFromOptions(vision, {
+          baseOptions: { modelAssetPath: MODEL_URL, delegate: 'GPU' },
+          runningMode: 'VIDEO',
+          minDetectionConfidence: 0.5,
+        })
+      } catch (gpuError) {
+        console.warn('GPU delegate failed for MediaPipe face detector, falling back to CPU:', gpuError)
+        detector = await FaceDetector.createFromOptions(vision, {
+          baseOptions: { modelAssetPath: MODEL_URL, delegate: 'CPU' },
+          runningMode: 'VIDEO',
+          minDetectionConfidence: 0.5,
+        })
+      }
+
+      if (!streamRef.current) {
+        // User closed camera while model was downloading
+        detector?.close?.()
+        return
+      }
+
       detectorRef.current = detector
+      setDetectorStatus('ready')
       setStatus('watching')
 
+      // 4. Start sampling framing ticks
       timerRef.current = window.setInterval(() => {
         const element = videoRef.current
         const activeDetector = detectorRef.current
@@ -119,21 +208,31 @@ export function useFramingCheck() {
             }])
           }
         } catch (detectError) {
-          setStatus('error')
-          setError(detectError?.message ?? 'The camera check failed while running.')
+          console.warn('MediaPipe detect frame warning:', detectError)
         } finally {
           busyRef.current = false
         }
       }, SAMPLE_TICK_MS)
-    } catch (mediaError) {
-      setStatus('error')
-      setError(mediaError?.name === 'NotAllowedError'
-        ? 'Camera permission was declined. Practice works fine without it.'
-        : (mediaError?.message ?? 'Could not start the camera.'))
+    } catch (modelError) {
+      console.warn('MediaPipe model load error (camera will remain live without AI framing):', modelError)
+      setDetectorStatus('offline')
+      // Camera is still active, just detector is offline
+      if (status !== 'error') {
+        setStatus('active')
+      }
     }
-  }, [])
+  }, [stopCamera, status])
 
-  return { videoRef, startCamera, stopCamera, status, error, samples, summary: summarise(samples) }
+  return {
+    videoRef,
+    startCamera,
+    stopCamera,
+    status,
+    detectorStatus,
+    error,
+    samples,
+    summary: summarise(samples),
+  }
 }
 
 /** Turns raw samples into plain descriptive feedback — never a score of the person. */

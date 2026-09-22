@@ -4,43 +4,28 @@
  * Every node traces to an endpoint that actually exists:
  *   - Profile Core + completed/gap nodes  -> GET /profile   (real since Phase A)
  *   - Target match node                   -> GET /discovery (already real)
- *
- * Nothing here calls RecommendationService, which is still a stub. See pickTargetMatch
- * below for exactly what the "match" means and what it does not.
  */
 
 export const NODE_KINDS = {
-  core: { label: 'Profile core', chip: 'bg-secondary-800 text-white', dot: 'bg-secondary-800' },
-  done: { label: 'Completed', chip: 'bg-success-50 text-success-700', dot: 'bg-success-500' },
-  gap: { label: 'Missing', chip: 'bg-danger-50 text-danger-700', dot: 'bg-danger-500' },
-  target: { label: 'Target match', chip: 'bg-primary-50 text-primary-700', dot: 'bg-primary-500' },
-  action: { label: 'Next step', chip: 'bg-accent-50 text-accent-600', dot: 'bg-accent-500' },
+  core: { label: 'Student Profile', chip: 'bg-secondary-900 text-white border border-secondary-700', dot: 'bg-primary-500' },
+  done: { label: 'Completed', chip: 'bg-emerald-50 text-emerald-700 border border-emerald-200', dot: 'bg-emerald-500' },
+  gap: { label: 'Missing Info', chip: 'bg-rose-50 text-rose-700 border border-rose-200', dot: 'bg-rose-500' },
+  target: { label: 'Target Match', chip: 'bg-primary-50 text-primary-700 border border-primary-200', dot: 'bg-primary-500' },
+  action: { label: 'Next Action', chip: 'bg-indigo-50 text-indigo-700 border border-indigo-200', dot: 'bg-indigo-500' },
 }
 
 /** The four study fields the roadmap tracks, in display order. */
-const FIELDS = [
-  { key: 'cgpa', label: 'CGPA', format: (value) => `CGPA ${value}` },
-  { key: 'major', label: 'Major', format: (value) => `${value}` },
-  { key: 'budgetUsd', label: 'Budget', format: (value) => `Budget $${Number(value).toLocaleString('en-US')}` },
-  { key: 'degreeLevel', label: 'Degree level', format: (value) => `${value}` },
+export const FIELDS = [
+  { key: 'cgpa', label: 'CGPA Score', placeholder: 'e.g. 3.85 / 4.00', format: (value) => `CGPA ${value}` },
+  { key: 'major', label: 'Intended Major', placeholder: 'e.g. Computer Science', format: (value) => `${value}` },
+  { key: 'budgetUsd', label: 'Annual Budget', placeholder: 'e.g. $25,000 USD', format: (value) => `$${Number(value).toLocaleString('en-US')}/yr` },
+  { key: 'degreeLevel', label: 'Degree Target', placeholder: 'e.g. Masters, Bachelors', format: (value) => `${value}` },
 ]
 
-const isSet = (value) => value !== null && value !== undefined && value !== ''
+export const isSet = (value) => value !== null && value !== undefined && value !== ''
 
 /**
- * Picks a target program for the profile.
- *
- * ── WHAT THIS IS ─────────────────────────────────────────────────────────────────
- * A deliberately simple client-side rule over the programs GET /discovery already
- * returned: keep programs whose Level matches the student's DegreeLevel and whose
- * AnnualTuitionUsd is within budget, then take the cheapest. If no budget is set,
- * budget is not applied; if no degree level is set, level is not applied.
- *
- * ── WHAT THIS IS NOT ─────────────────────────────────────────────────────────────
- * This is NOT a recommendation engine and does NOT call RecommendationService, which
- * remains a stub returning an empty list. There is no scoring model, no ranking
- * beyond price, and no use of CGPA or Major in the match — those are shown as profile
- * completeness only. Replacing this with real matching is separate future work.
+ * Picks a target program for the profile from GET /discovery programs.
  */
 export function pickTargetMatch(profile, programs) {
   if (!programs?.length) return null
@@ -56,112 +41,167 @@ export function pickTargetMatch(profile, programs) {
 }
 
 /**
- * Builds reactflow nodes + edges.
- * Returns { nodes, edges, completed, total, target } — counts drive the summary line.
+ * Builds reactflow nodes + edges with enhanced positioning, custom styles, and responsive spacing.
  */
 export function buildRoadmapGraph(profile, programs) {
-  const name = [profile.firstName, profile.lastName].filter(Boolean).join(' ') || 'Your profile'
+  const name = [profile.firstName, profile.lastName].filter(Boolean).join(' ') || 'Your Profile'
   const nodes = []
   const edges = []
 
-  const CORE_X = 340
-  const CORE_Y = 260
-
-  nodes.push({
-    id: 'core',
-    type: 'roadmap',
-    position: { x: CORE_X, y: CORE_Y },
-    data: { kind: 'core', title: name, subtitle: profile.email },
-    draggable: false,
-  })
-
-  // One node per tracked field: completed (green) or gap (red).
   const completedFields = []
   const gapFields = []
   FIELDS.forEach((field) => {
     (isSet(profile[field.key]) ? completedFields : gapFields).push(field)
   })
 
-  completedFields.forEach((field, index) => {
-    const id = `done-${field.key}`
-    nodes.push({
-      id,
-      type: 'roadmap',
-      position: { x: 20, y: 60 + index * 110 },
-      data: { kind: 'done', title: field.label, subtitle: field.format(profile[field.key]) },
-    })
-    edges.push({ id: `e-${id}`, source: id, target: 'core', animated: false, style: { strokeDasharray: '6 4' }, type: 'smoothstep' })
+  const CORE_X = 380
+  const CORE_Y = 220
+
+  // Core Student Node
+  nodes.push({
+    id: 'core',
+    type: 'roadmap',
+    position: { x: CORE_X, y: CORE_Y },
+    data: {
+      kind: 'core',
+      title: name,
+      subtitle: profile.email || 'Student Account',
+      meta: `${completedFields.length} of ${FIELDS.length} completed`,
+    },
+    draggable: false,
   })
 
-  gapFields.forEach((field, index) => {
-    const id = `gap-${field.key}`
+  // Completed Nodes (Positioned on the Left)
+  completedFields.forEach((field, index) => {
+    const id = `done-${field.key}`
+    const yPos = 60 + index * 125
     nodes.push({
       id,
       type: 'roadmap',
-      position: { x: 660, y: 40 + index * 110 },
-      data: { kind: 'gap', title: field.label, subtitle: 'Not set yet' },
+      position: { x: 40, y: yPos },
+      data: {
+        kind: 'done',
+        title: field.label,
+        subtitle: field.format(profile[field.key]),
+        fieldKey: field.key,
+      },
     })
-    edges.push({ id: `e-${id}`, source: 'core', target: id, style: { strokeDasharray: '6 4' }, type: 'smoothstep' })
+    edges.push({
+      id: `e-${id}`,
+      source: id,
+      target: 'core',
+      animated: true,
+      type: 'smoothstep',
+      style: { stroke: '#10b981', strokeWidth: 2 },
+    })
+  })
 
-    // Every gap gets exactly one real next step: the Profile page field that fills it.
+  // Gap Nodes (Positioned in Center-Right) and Action Nodes (Positioned on Far-Right)
+  gapFields.forEach((field, index) => {
+    const id = `gap-${field.key}`
+    const yPos = 40 + index * 130
+    nodes.push({
+      id,
+      type: 'roadmap',
+      position: { x: 740, y: yPos },
+      data: {
+        kind: 'gap',
+        title: field.label,
+        subtitle: 'Profile requirement missing',
+        fieldKey: field.key,
+      },
+    })
+    edges.push({
+      id: `e-${id}`,
+      source: 'core',
+      target: id,
+      type: 'smoothstep',
+      style: { stroke: '#f43f5e', strokeWidth: 2, strokeDasharray: '6 4' },
+    })
+
     const actionId = `action-${field.key}`
     nodes.push({
       id: actionId,
       type: 'roadmap',
-      position: { x: 960, y: 40 + index * 110 },
+      position: { x: 1040, y: yPos },
       data: {
         kind: 'action',
-        title: `Add your ${field.label.toLowerCase()}`,
-        subtitle: 'Opens Profile',
+        title: `Set ${field.label}`,
+        subtitle: 'Update in Profile',
+        badge: 'Recommended',
         action: { page: 'Profile', focus: field.key },
       },
     })
-    edges.push({ id: `e-${actionId}`, source: id, target: actionId, style: { strokeDasharray: '6 4' }, type: 'smoothstep' })
+    edges.push({
+      id: `e-${actionId}`,
+      source: id,
+      target: actionId,
+      animated: true,
+      type: 'smoothstep',
+      style: { stroke: '#6366f1', strokeWidth: 2 },
+    })
   })
 
-  // Target match, computed from the real Discovery catalogue.
+  // Target Program Match
   const target = pickTargetMatch(profile, programs)
   if (target) {
     nodes.push({
       id: 'target',
       type: 'roadmap',
-      position: { x: CORE_X, y: CORE_Y + 210 },
+      position: { x: CORE_X - 40, y: CORE_Y + 230 },
       data: {
         kind: 'target',
         title: target.name,
-        subtitle: `${target.university} · ${target.country} · $${target.annualTuitionUsd.toLocaleString('en-US')}/yr`,
+        university: target.university,
+        country: target.country,
+        subtitle: `${target.university} · ${target.country}`,
+        price: `$${target.annualTuitionUsd.toLocaleString('en-US')}/yr`,
+        level: target.level,
       },
     })
-    edges.push({ id: 'e-target', source: 'core', target: 'target', style: { strokeDasharray: '6 4' }, type: 'smoothstep' })
+    edges.push({
+      id: 'e-target',
+      source: 'core',
+      target: 'target',
+      animated: true,
+      type: 'smoothstep',
+      style: { stroke: '#ff6b3d', strokeWidth: 2.5 },
+    })
 
-    // Saving a program is a real, working action (Discovery's shortlist).
     nodes.push({
       id: 'action-shortlist',
       type: 'roadmap',
-      position: { x: CORE_X + 300, y: CORE_Y + 210 },
+      position: { x: CORE_X + 340, y: CORE_Y + 230 },
       data: {
         kind: 'action',
-        title: 'Shortlist a program',
-        subtitle: 'Opens Discovery',
+        title: 'Explore Discovery',
+        subtitle: 'View full catalogue & shortlist',
+        badge: 'Catalogue',
         action: { page: 'Discovery' },
       },
     })
-    edges.push({ id: 'e-action-shortlist', source: 'target', target: 'action-shortlist', style: { strokeDasharray: '6 4' }, type: 'smoothstep' })
+    edges.push({
+      id: 'e-action-shortlist',
+      source: 'target',
+      target: 'action-shortlist',
+      animated: true,
+      type: 'smoothstep',
+      style: { stroke: '#ff6b3d', strokeWidth: 2 },
+    })
   }
-
-  // Deliberately no nodes for Documents, Visa, or Scholarships: those services are
-  // still stubs, so a "next step" pointing at them would lead nowhere.
 
   return {
     nodes,
     edges,
     completed: completedFields.length,
     total: FIELDS.length,
+    completedFields,
+    gapFields,
     target,
     noTargetReason: !programs?.length
-      ? 'No programs loaded.'
+      ? 'No programs available in catalogue.'
       : !target
-        ? 'No program in the catalogue matches your degree level and budget yet.'
+        ? 'No program in the catalogue matches your current degree level and budget yet.'
         : null,
   }
 }

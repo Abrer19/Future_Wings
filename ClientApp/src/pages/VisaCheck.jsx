@@ -3,21 +3,26 @@ import { apiRequest } from '../auth.js'
 import Toast from '../components/ui/Toast.jsx'
 import { BTN_PRIMARY, CARD, CONTROL, FOCUS } from '../components/ui/styles.js'
 
-const steps = ['Study plan', 'Funding', 'Language', 'Visa history']
+const steps = [
+  { title: 'Study Plan', hint: 'Country & Major' },
+  { title: 'Funding', hint: 'Tuition & Proof' },
+  { title: 'Language', hint: 'IELTS / PTE' },
+  { title: 'Visa History', hint: 'Ties & Prior Filings' },
+]
+
 const initial = {
   applicationId: '', destinationCountry: '', degreeLevel: "Master's", intendedMajor: '',
   annualTuitionUsd: '', availableFundsUsd: '', hasFundingProof: false,
   financialAdequacyScore: 50, hasLanguageScore: false, ieltsOverallScore: '',
   tiesToHomeCountryScore: 50, hasPriorVisaRefusal: false,
 }
+
 const meter = {
-  Low: { label: 'Low', color: 'bg-success-500', text: 'text-success-700' },
-  Medium: { label: 'Moderate', color: 'bg-warning-500', text: 'text-warning-700' },
-  High: { label: 'High', color: 'bg-danger-500', text: 'text-danger-700' },
+  Low: { label: 'Low Risk', color: 'bg-success-500', text: 'text-success-700', bg: 'bg-success-50 border-success-200' },
+  Medium: { label: 'Moderate Risk', color: 'bg-warning-500', text: 'text-warning-700', bg: 'bg-warning-50 border-warning-200' },
+  High: { label: 'High Risk', color: 'bg-danger-500', text: 'text-danger-700', bg: 'bg-danger-50 border-danger-200' },
 }
 
-// While the student fills the form, show a rough checklist meter. The API result
-// replaces it after evaluation and remains the only authoritative score.
 function previewScore(form) {
   let score = 8
   if (!form.hasFundingProof) score += 22
@@ -110,72 +115,278 @@ export default function VisaCheck({ session }) {
   const currentMeter = result ? meter[result.riskLevel] ?? meter.High : null
   const preview = previewScore(form)
   const previewLevel = preview < 30 ? 'Low' : preview < 60 ? 'Medium' : 'High'
+
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <header>
-        <p className="text-sm font-semibold text-primary-600">Application preparation</p>
-        <h1 className="mt-1 text-3xl font-bold text-secondary-950">Visa Check</h1>
-        <p className="mt-2 text-secondary-500">Review your study plan and prepare evidence before filing an official visa application.</p>
-        <p className="mt-1 text-xs text-secondary-400">This readiness score is a planning aid, not a visa decision or an official requirement.</p>
+    <div className="mx-auto max-w-6xl space-y-8 pb-16">
+      {/* Header Banner */}
+      <header className="relative overflow-hidden rounded-3xl border border-secondary-200 bg-gradient-to-r from-secondary-950 via-secondary-900 to-secondary-950 p-6 text-white shadow-xl sm:p-8">
+        <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary-500/15 blur-3xl" />
+        <div className="max-w-3xl relative z-10">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-500/20 border border-primary-400/30 px-3 py-0.5 text-xs font-bold uppercase tracking-wider text-primary-300">
+            <span className="h-2 w-2 rounded-full bg-primary-400 animate-pulse" />
+            Consular Risk Simulator
+          </span>
+          <h1 className="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-white">
+            Visa Readiness Assessment
+          </h1>
+          <p className="mt-1 text-xs sm:text-sm text-secondary-300">
+            Audit your financial coverage, funding documents, language test scores, and ties to home country prior to filing.
+          </p>
+        </div>
       </header>
 
-      {error && <div className="rounded-lg border border-danger-200 bg-danger-50 p-4 text-sm text-danger-700" role="alert">{error}</div>}
+      {error && (
+        <div className="rounded-2xl border border-danger-200 bg-danger-50 p-4 text-xs font-semibold text-danger-700 shadow-sm" role="alert">
+          {error}
+        </div>
+      )}
+
+      {/* Step Indicators */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {steps.map((item, index) => (
+          <button
+            key={item.title}
+            type="button"
+            onClick={() => setStep(index)}
+            className={`rounded-2xl border p-4 text-left transition shadow-sm ${
+              index === step
+                ? 'border-primary-500 bg-white ring-2 ring-primary-200'
+                : index < step
+                ? 'border-success-200 bg-success-50/40 text-secondary-900'
+                : 'border-secondary-200 bg-white text-secondary-500'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className={`flex h-6 w-6 items-center justify-center rounded-lg text-xs font-bold ${
+                index === step
+                  ? 'bg-primary-500 text-white'
+                  : index < step
+                  ? 'bg-success-600 text-white'
+                  : 'bg-secondary-100 text-secondary-600'
+              }`}>
+                {index < step ? '✓' : index + 1}
+              </span>
+              <span className="text-[10px] font-bold uppercase text-secondary-400">Step {index + 1}</span>
+            </div>
+            <p className="mt-2 font-bold text-secondary-950 text-sm">{item.title}</p>
+            <p className="text-[11px] text-secondary-400 font-medium">{item.hint}</p>
+          </button>
+        ))}
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
-        <form className={`${CARD} space-y-5 p-5 sm:p-7`} onSubmit={evaluate}>
-          <div className="flex items-center justify-between gap-3"><h2 className="text-lg font-bold text-secondary-950">{steps[step]}</h2><span className="text-xs font-medium text-secondary-500">Step {step + 1} of {steps.length}</span></div>
-          <div aria-label="Assessment progress" className="flex gap-2">{steps.map((name, index) => <span aria-current={index === step ? 'step' : undefined} className={`h-1.5 flex-1 rounded-full ${index <= step ? 'bg-primary-500' : 'bg-secondary-200'}`} key={name} />)}</div>
+        {/* Form Wizard */}
+        <form className="rounded-3xl border border-secondary-200/80 bg-white p-6 sm:p-8 shadow-sm space-y-6" onSubmit={evaluate}>
+          <div className="flex items-center justify-between border-b border-secondary-100 pb-4">
+            <h2 className="text-base font-extrabold text-secondary-950">{steps[step].title} Details</h2>
+            <span className="text-xs font-bold text-secondary-500">Step {step + 1} of {steps.length}</span>
+          </div>
 
-          {step === 0 && <div className="space-y-4">
-            <Field label="Tracked application (optional)" id="visa-application"><select className={`${CONTROL} w-full`} id="visa-application" onChange={(event) => selectApplication(event.target.value)} value={form.applicationId}><option value="">Assess a new study plan</option>{applications.map((item) => <option key={item.applicationId} value={item.applicationId}>{item.programName} — {item.universityName}</option>)}</select></Field>
-            {form.applicationId && <button className={`text-sm font-semibold text-primary-600 hover:underline ${FOCUS}`} disabled={loading} onClick={checkApplication} type="button">View report from saved application details</button>}
-            <Field label="Destination country" id="visa-country"><input className={`${CONTROL} w-full`} id="visa-country" maxLength={100} onChange={(event) => update('destinationCountry', event.target.value)} placeholder="e.g. Canada" required value={form.destinationCountry} /></Field>
-            <Field label="Degree level" id="visa-degree"><select className={`${CONTROL} w-full`} id="visa-degree" onChange={(event) => update('degreeLevel', event.target.value)} value={form.degreeLevel}>{["Bachelor's", "Master's", 'PhD', 'Diploma', 'Certificate'].map((level) => <option key={level}>{level}</option>)}</select></Field>
-            <Field label="Academic major" id="visa-major"><input className={`${CONTROL} w-full`} id="visa-major" maxLength={100} onChange={(event) => update('intendedMajor', event.target.value)} placeholder="e.g. Computer Science" value={form.intendedMajor} /></Field>
-          </div>}
+          {step === 0 && (
+            <div className="space-y-4">
+              <Field label="Import from Tracked Application (Optional)" id="visa-application">
+                <select className={`${CONTROL} w-full`} id="visa-application" onChange={(event) => selectApplication(event.target.value)} value={form.applicationId}>
+                  <option value="">Assess a new study plan</option>
+                  {applications.map((item) => (
+                    <option key={item.applicationId} value={item.applicationId}>
+                      {item.programName} — {item.universityName}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              {form.applicationId && (
+                <button className={`text-xs font-bold text-primary-600 hover:underline ${FOCUS}`} disabled={loading} onClick={checkApplication} type="button">
+                  Load report from saved application details &rarr;
+                </button>
+              )}
+              <Field label="Destination Country" id="visa-country">
+                <input className={`${CONTROL} w-full`} id="visa-country" maxLength={100} onChange={(event) => update('destinationCountry', event.target.value)} placeholder="e.g. Canada" required value={form.destinationCountry} />
+              </Field>
+              <Field label="Degree Level" id="visa-degree">
+                <select className={`${CONTROL} w-full`} id="visa-degree" onChange={(event) => update('degreeLevel', event.target.value)} value={form.degreeLevel}>
+                  {["Bachelor's", "Master's", 'PhD', 'Diploma', 'Certificate'].map((level) => (
+                    <option key={level}>{level}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Intended Academic Major" id="visa-major">
+                <input className={`${CONTROL} w-full`} id="visa-major" maxLength={100} onChange={(event) => update('intendedMajor', event.target.value)} placeholder="e.g. Computer Science" value={form.intendedMajor} />
+              </Field>
+            </div>
+          )}
 
-          {step === 1 && <div className="space-y-4">
-            <Field label="Annual tuition (USD)" id="visa-tuition"><input className={`${CONTROL} w-full`} id="visa-tuition" min="0" onChange={(event) => update('annualTuitionUsd', event.target.value)} step="1" type="number" value={form.annualTuitionUsd} /></Field>
-            <Field label="Available funds (USD)" id="visa-funds"><input className={`${CONTROL} w-full`} id="visa-funds" min="0" onChange={(event) => update('availableFundsUsd', event.target.value)} step="1" type="number" value={form.availableFundsUsd} /></Field>
-            <Check label="I have bank statements or sponsor funding proof" checked={form.hasFundingProof} onChange={(value) => update('hasFundingProof', value)} />
-            <Slider label="How adequate is your financial coverage?" id="visa-financial" value={form.financialAdequacyScore} onChange={(value) => update('financialAdequacyScore', value)} />
-          </div>}
+          {step === 1 && (
+            <div className="space-y-4">
+              <Field label="Annual Tuition (USD)" id="visa-tuition">
+                <input className={`${CONTROL} w-full`} id="visa-tuition" min="0" onChange={(event) => update('annualTuitionUsd', event.target.value)} step="1" type="number" value={form.annualTuitionUsd} />
+              </Field>
+              <Field label="Liquid Available Funds (USD)" id="visa-funds">
+                <input className={`${CONTROL} w-full`} id="visa-funds" min="0" onChange={(event) => update('availableFundsUsd', event.target.value)} step="1" type="number" value={form.availableFundsUsd} />
+              </Field>
+              <Check label="I hold verifiable 6-month bank statements or approved sponsor affidavit" checked={form.hasFundingProof} onChange={(value) => update('hasFundingProof', value)} />
+              <Slider label="Self-Assessed Living & Travel Coverage Adequacy" id="visa-financial" value={form.financialAdequacyScore} onChange={(value) => update('financialAdequacyScore', value)} />
+            </div>
+          )}
 
-          {step === 2 && <div className="space-y-4">
-            <Check label="I have a valid language test result" checked={form.hasLanguageScore} onChange={(value) => update('hasLanguageScore', value)} />
-            <Field label="IELTS overall score (if applicable)" id="visa-ielts"><input className={`${CONTROL} w-full`} disabled={!form.hasLanguageScore} id="visa-ielts" max="9" min="0" onChange={(event) => update('ieltsOverallScore', event.target.value)} step="0.5" type="number" value={form.ieltsOverallScore} /></Field>
-            <p className="text-xs text-secondary-500">Check your program’s accepted tests and required minimum; the tool uses a planning benchmark.</p>
-          </div>}
+          {step === 2 && (
+            <div className="space-y-4">
+              <Check label="I have taken an official English proficiency exam (IELTS/PTE/TOEFL)" checked={form.hasLanguageScore} onChange={(value) => update('hasLanguageScore', value)} />
+              <Field label="Overall Exam Score (e.g. IELTS Overall)" id="visa-ielts">
+                <input className={`${CONTROL} w-full`} disabled={!form.hasLanguageScore} id="visa-ielts" max="9" min="0" onChange={(event) => update('ieltsOverallScore', event.target.value)} step="0.5" type="number" value={form.ieltsOverallScore} />
+              </Field>
+              <p className="text-xs text-secondary-500">
+                Most student visa streams (SDS Canada, UK Student Route, US F-1) expect 6.0–6.5+ overall.
+              </p>
+            </div>
+          )}
 
-          {step === 3 && <div className="space-y-4">
-            <Check label="I have had a previous visa refusal" checked={form.hasPriorVisaRefusal} onChange={(value) => update('hasPriorVisaRefusal', value)} />
-            <Slider label="How well can you document ties to your home country?" id="visa-ties" value={form.tiesToHomeCountryScore} onChange={(value) => update('tiesToHomeCountryScore', value)} />
-            <p className="text-xs text-secondary-500">Answer honestly. A prior refusal should be disclosed and explained in an official application.</p>
-          </div>}
+          {step === 3 && (
+            <div className="space-y-4">
+              <Check label="I have a prior visa refusal in any country" checked={form.hasPriorVisaRefusal} onChange={(value) => update('hasPriorVisaRefusal', value)} />
+              <Slider label="Home Country Ties & Post-Study Intent Clarity" id="visa-ties" value={form.tiesToHomeCountryScore} onChange={(value) => update('tiesToHomeCountryScore', value)} />
+              <p className="text-xs text-secondary-500">
+                Honesty is essential. Previous refusals must be declared and explained with updated documentation.
+              </p>
+            </div>
+          )}
 
           <div className="flex justify-between gap-3 border-t border-secondary-100 pt-5">
-            <button className={`rounded-lg px-4 py-2.5 text-sm font-semibold text-secondary-600 hover:bg-secondary-100 disabled:opacity-40 ${FOCUS}`} disabled={step === 0 || loading} onClick={() => setStep(step - 1)} type="button">Back</button>
-            <button className={BTN_PRIMARY} disabled={loading} type="submit">{loading ? 'Calculating…' : step === steps.length - 1 ? 'Calculate readiness' : 'Continue'}</button>
+            <button
+              className={`rounded-2xl border border-secondary-300 px-5 py-2.5 text-xs font-bold text-secondary-700 hover:bg-secondary-50 disabled:opacity-40 transition ${FOCUS}`}
+              disabled={step === 0 || loading}
+              onClick={() => setStep(step - 1)}
+              type="button"
+            >
+              Previous Step
+            </button>
+            <button
+              className="rounded-2xl bg-primary-500 hover:bg-primary-600 px-6 py-2.5 text-xs font-extrabold text-white shadow-md shadow-primary-500/25 transition disabled:opacity-50"
+              disabled={loading}
+              type="submit"
+            >
+              {loading ? 'Evaluating…' : step === steps.length - 1 ? 'Calculate Visa Readiness' : 'Continue &rarr;'}
+            </button>
           </div>
         </form>
 
-        <section aria-live="polite" className={`${CARD} space-y-5 p-5 sm:p-7`}>
-          <h2 className="text-lg font-bold text-secondary-950">Readiness report</h2>
-          {loading && <div className="space-y-3" role="status"><div className="h-3 w-3/4 animate-pulse rounded-full bg-primary-100" /><div className="h-3 w-full animate-pulse rounded-full bg-secondary-100" /><p className="text-sm text-secondary-500">Calculating your risk factors…</p></div>}
-          {!loading && !result && <><p className="text-sm text-secondary-500">This meter updates as you enter evidence. Complete the assessment for your full report.</p><div className="flex items-end justify-between"><span className={`text-lg font-bold ${meter[previewLevel].text}`}>{meter[previewLevel].label} provisional risk</span><span className="text-sm font-semibold text-secondary-700">{preview}/100</span></div><div aria-label={`Provisional risk score ${preview} of 100`} aria-valuemax={100} aria-valuemin={0} aria-valuenow={preview} className="h-3 overflow-hidden rounded-full bg-secondary-100" role="progressbar"><div className={`h-full rounded-full transition-all duration-300 ${meter[previewLevel].color}`} style={{ width: `${preview}%` }} /></div></>}
-          {!loading && result && <>
-            <div><div className="flex items-end justify-between"><span className={`text-2xl font-bold ${currentMeter.text}`}>{currentMeter.label} risk</span><span className="text-sm font-semibold text-secondary-700">{result.riskScore}/100</span></div><div aria-label={`Risk score ${result.riskScore} of 100`} className="mt-3 h-3 overflow-hidden rounded-full bg-secondary-100" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={result.riskScore}><div className={`h-full rounded-full transition-all duration-700 ${currentMeter.color}`} style={{ width: `${result.riskScore}%` }} /></div></div>
-            <div><h3 className="font-semibold text-secondary-950">Key risk factors</h3><ul className="mt-3 space-y-3">{result.reasons.map((reason) => <li className="flex gap-2 text-sm text-secondary-700" key={reason}><span aria-hidden="true" className={reason.startsWith('Check destination') ? 'text-success-600' : 'text-warning-600'}>{reason.startsWith('Check destination') ? '✓' : '⚠'}</span><span>{reason}</span></li>)}</ul></div>
-            {reportSource === 'manual' && (form.hasFundingProof || form.hasLanguageScore) && <div><h3 className="font-semibold text-secondary-950">Evidence supplied</h3><ul className="mt-3 space-y-2 text-sm text-secondary-700">{form.hasFundingProof && <li><span aria-hidden="true" className="mr-2 text-success-600">✓</span>Funding proof available</li>}{form.hasLanguageScore && <li><span aria-hidden="true" className="mr-2 text-success-600">✓</span>Language test evidence available</li>}</ul></div>}
-            <div><h3 className="font-semibold text-secondary-950">Your next steps</h3><ul className="mt-3 space-y-3">{result.recommendations.map((item) => <li className="flex gap-2 text-sm text-secondary-700" key={item}><span aria-hidden="true" className="text-success-600">✓</span><span>{item}</span></li>)}</ul></div>
-          </>}
+        {/* Readiness Report Card */}
+        <section aria-live="polite" className="rounded-3xl border border-secondary-200/80 bg-white p-6 sm:p-8 shadow-sm space-y-6">
+          <div className="flex items-center justify-between border-b border-secondary-100 pb-3">
+            <h2 className="text-base font-extrabold text-secondary-950">Readiness Risk Analysis</h2>
+            {result && (
+              <span className={`rounded-lg px-2.5 py-0.5 text-xs font-black uppercase ${currentMeter.bg} ${currentMeter.text}`}>
+                {currentMeter.label}
+              </span>
+            )}
+          </div>
+
+          {loading && (
+            <div className="space-y-4 py-8 text-center" role="status">
+              <div className="h-3 w-3/4 mx-auto animate-pulse rounded-full bg-primary-200" />
+              <div className="h-3 w-1/2 mx-auto animate-pulse rounded-full bg-secondary-200" />
+              <p className="text-xs font-bold text-secondary-600">Simulating embassy risk matrix…</p>
+            </div>
+          )}
+
+          {!loading && !result && (
+            <div className="space-y-4">
+              <p className="text-xs text-secondary-500 leading-relaxed">
+                This provisional risk meter updates dynamically as you complete the wizard. Submit to generate your full advisory report.
+              </p>
+              <div className="flex items-end justify-between">
+                <span className={`text-base font-black ${meter[previewLevel].text}`}>{meter[previewLevel].label}</span>
+                <span className="font-mono text-sm font-bold text-secondary-700">{preview}/100</span>
+              </div>
+              <div aria-label={`Provisional risk score ${preview} of 100`} className="h-3 overflow-hidden rounded-full bg-secondary-100" role="progressbar">
+                <div className={`h-full rounded-full transition-all duration-300 ${meter[previewLevel].color}`} style={{ width: `${preview}%` }} />
+              </div>
+            </div>
+          )}
+
+          {!loading && result && (
+            <div className="space-y-5 animate-fadeIn">
+              <div>
+                <div className="flex items-end justify-between">
+                  <span className={`text-xl font-black ${currentMeter.text}`}>{currentMeter.label}</span>
+                  <span className="font-mono text-sm font-bold text-secondary-700">{result.riskScore}/100</span>
+                </div>
+                <div aria-label={`Risk score ${result.riskScore} of 100`} className="mt-2.5 h-3 overflow-hidden rounded-full bg-secondary-100" role="progressbar">
+                  <div className={`h-full rounded-full transition-all duration-700 ${currentMeter.color}`} style={{ width: `${result.riskScore}%` }} />
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-secondary-900">Key Risk Indicators</h3>
+                <ul className="mt-2.5 space-y-2">
+                  {result.reasons.map((reason) => (
+                    <li className="flex items-start gap-2 text-xs text-secondary-700 bg-secondary-50 border border-secondary-200/70 rounded-xl p-2.5" key={reason}>
+                      <span className={`font-bold mt-0.5 ${reason.startsWith('Check destination') ? 'text-success-600' : 'text-amber-600'}`}>
+                        {reason.startsWith('Check destination') ? '✓' : '•'}
+                      </span>
+                      <span>{reason}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-secondary-900">Recommended Action Plan</h3>
+                <ul className="mt-2.5 space-y-2">
+                  {result.recommendations.map((item) => (
+                    <li className="flex items-start gap-2 text-xs text-secondary-700 bg-primary-50/50 border border-primary-200/60 rounded-xl p-2.5" key={item}>
+                      <span className="text-primary-600 font-bold mt-0.5">&rarr;</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
         </section>
       </div>
+
       <Toast message={toast} />
     </div>
   )
 }
 
-function Field({ label, id, children }) { return <div><label className="mb-1.5 block text-sm font-semibold text-secondary-700" htmlFor={id}>{label}</label>{children}</div> }
-function Check({ label, checked, onChange }) { return <label className="flex items-center gap-3 text-sm text-secondary-700"><input checked={checked} className="h-4 w-4 accent-primary-500" onChange={(event) => onChange(event.target.checked)} type="checkbox" />{label}</label> }
-function Slider({ label, id, value, onChange }) { return <Field id={id} label={`${label} ${value}/100`}><input className="w-full accent-primary-500" id={id} max="100" min="0" onChange={(event) => onChange(event.target.value)} type="range" value={value} /></Field> }
+function Field({ label, id, children }) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-secondary-700" htmlFor={id}>
+        {label}
+      </label>
+      {children}
+    </div>
+  )
+}
+
+function Check({ label, checked, onChange }) {
+  return (
+    <label className="flex items-start gap-3 text-xs font-medium text-secondary-700 cursor-pointer bg-secondary-50/80 border border-secondary-200/70 p-3 rounded-xl hover:bg-secondary-50">
+      <input
+        checked={checked}
+        className="h-4 w-4 rounded accent-primary-500 mt-0.5 shrink-0"
+        onChange={(event) => onChange(event.target.checked)}
+        type="checkbox"
+      />
+      <span>{label}</span>
+    </label>
+  )
+}
+
+function Slider({ label, id, value, onChange }) {
+  return (
+    <Field id={id} label={`${label} (${value}/100)`}>
+      <input
+        className="w-full accent-primary-500 cursor-pointer"
+        id={id}
+        max="100"
+        min="0"
+        onChange={(event) => onChange(event.target.value)}
+        type="range"
+        value={value}
+      />
+    </Field>
+  )
+}
