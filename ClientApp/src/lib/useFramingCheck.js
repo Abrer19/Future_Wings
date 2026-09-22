@@ -31,9 +31,10 @@ import { FaceDetector, FilesetResolver } from '@mediapipe/tasks-vision'
  * Frames are analysed in memory and discarded; none are uploaded or stored.
  */
 
-const WASM_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm'
-const MODEL_URL =
-  'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite'
+const WASM_BASE = import.meta.env.VITE_MEDIAPIPE_WASM_BASE
+  ?? 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm'
+const MODEL_URL = import.meta.env.VITE_MEDIAPIPE_MODEL_URL
+  ?? 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite'
 
 /** How often to sample. The detector is fast, so this is a UX choice, not a limit. */
 const SAMPLE_TICK_MS = 700
