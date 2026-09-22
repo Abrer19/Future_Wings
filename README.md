@@ -1,5 +1,10 @@
 # FutureWings
 
+![Continuous Integration](https://github.com/Abrer19/Future_Wings/actions/workflows/ci.yml/badge.svg)
+![.NET 8](https://img.shields.io/badge/.NET-8.0-purple.svg)
+![React 19](https://img.shields.io/badge/React-19-blue.svg)
+![Tests](https://img.shields.io/badge/Tests-86%20Passed-success.svg)
+
 A modern, full-stack study-abroad planning and application tracking platform. Students discover university programs worldwide, shortlist and compare degrees, manage application lifecycles and deadlines, store essential visa and admission documents, and receive personalized AI-driven program recommendations. Administrators have an operations console for managing users and monitoring platform activity.
 
 **Stack** — .NET 8 Web API with Entity Framework Core on SQL Server, paired with a modern React 19 + Vite + Tailwind CSS single-page application in `ClientApp/`.
@@ -13,6 +18,7 @@ A modern, full-stack study-abroad planning and application tracking platform. St
 | [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md) | Clean architecture rules, request flows, authentication, DI, and end-to-end feature guides |
 | [docs/DATABASE.md](docs/DATABASE.md) | Schema design, migrations history, reference seeders, and EF Core commands |
 | [ClientApp/README.md](ClientApp/README.md) | React 19 frontend setup, design tokens, and state management |
+| [SECURITY.md](SECURITY.md) | Vulnerability disclosure policy and security architecture guarantees |
 
 ---
 
@@ -60,13 +66,18 @@ The solution includes a comprehensive unit test suite running against in-memory 
 dotnet test
 ```
 
-### Test Coverage (21 Tests)
-- **Authentication**: Token claim injection, role authorization, BCrypt password hashing & salt verification.
-- **Applications**: Multi-status workflow (`Draft`, `Submitted`, `Under Review`, `Accepted`, `Withdrawn`), user isolation, deletion.
-- **Deadlines**: Task creation, sorting, category filtering, completion toggles, removal.
-- **Student Profile**: GPA, budget, major, and degree-level persistence.
-- **Recommendations**: Multi-factor ranking engine (academic fit, budget match, and personalized explanation generation).
-- **Documents**: File vault upload, content-type verification, metadata persistence, and deletion.
+### Test Coverage (86 Tests)
+- **Controllers & Integration**: WebApplicationFactory integration tests verifying authentication, authorization, and endpoint schemas.
+- **Authentication & Security**: Token claim injection, role authorization, BCrypt password hashing & salt verification.
+- **Applications & Tracking**: Multi-status workflow (`Draft`, `Submitted`, `Under Review`, `Accepted`, `Withdrawn`), user isolation, deduplication constraints, deletion.
+- **Deadlines & Planner**: Task creation, category classification, completion toggles, removal.
+- **Student Profile**: Academic details, GPA, budget, major, and degree-level persistence.
+- **Discovery Catalog & Bookmarks**: Query matching, country/degree filters, saved program toggles.
+- **Recommendations Engine**: Multi-factor ranking engine (academic fit, budget match, and personalized explanations).
+- **Documents Vault**: File upload validation, content-type verification, metadata persistence, and deletion.
+- **Scholarships & Reviews**: Filtered catalog queries, rating score clamping (1–5), university review retrieval.
+- **Visa Risk Calculator**: Deterministic preparation heuristic scoring, financial coverage checking, IELTS benchmarking.
+- **Administration & Billing**: Role management, tier assignment, demo checkout session creation, and MRR calculations.
 
 ---
 

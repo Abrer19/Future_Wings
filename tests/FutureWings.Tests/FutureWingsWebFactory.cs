@@ -20,6 +20,8 @@ public class FutureWingsWebFactory : WebApplicationFactory<Program>
     public const string TestIssuer = "FutureWings";
     public const string TestAudience = "FutureWings.Client";
 
+    private readonly string _dbName = "IntegrationTests_" + Guid.NewGuid().ToString("N");
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseSetting("Jwt:Secret", TestJwtSecret);
@@ -34,7 +36,7 @@ public class FutureWingsWebFactory : WebApplicationFactory<Program>
             if (descriptor != null) services.Remove(descriptor);
 
             services.AddDbContext<FutureWingsDbContext>(options =>
-                options.UseInMemoryDatabase("IntegrationTests_" + Guid.NewGuid()));
+                options.UseInMemoryDatabase(_dbName));
         });
 
         builder.UseEnvironment("Development");

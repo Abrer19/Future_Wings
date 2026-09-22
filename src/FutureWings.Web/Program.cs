@@ -131,7 +131,14 @@ app.MapHub<NotificationHub>("/hubs/notifications");
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<FutureWingsDbContext>();
-    await context.Database.MigrateAsync();
+    if (context.Database.IsRelational())
+    {
+        await context.Database.MigrateAsync();
+    }
+    else
+    {
+        await context.Database.EnsureCreatedAsync();
+    }
     await ApplicationStateSeeder.SeedAsync(context);
     await DiscoverySeeder.SeedAsync(context);
     await DemoUserSeeder.SeedAsync(context);
