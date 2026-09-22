@@ -8,39 +8,7 @@ import {
   CommissionMilestoneBar,
 } from '../components/agent/AgentCharts.jsx'
 
-const STATUS_BADGES = {
-  Draft: 'bg-slate-100 text-slate-700 border border-slate-200',
-  Submitted: 'bg-blue-50 text-blue-700 border border-blue-200 font-semibold',
-  'Under Review': 'bg-amber-50 text-amber-800 border border-amber-300 font-semibold',
-  Accepted: 'bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold',
-  Rejected: 'bg-rose-50 text-rose-700 border border-rose-200',
-  Withdrawn: 'bg-slate-100 text-slate-500',
-}
-
-const COUNTRY_FLAGS = {
-  CA: '🇨🇦',
-  Canada: '🇨🇦',
-  GB: '🇬🇧',
-  UK: '🇬🇧',
-  'United Kingdom': '🇬🇧',
-  US: '🇺🇸',
-  USA: '🇺🇸',
-  'United States': '🇺🇸',
-  AU: '🇦🇺',
-  Australia: '🇦🇺',
-  DE: '🇩🇪',
-  Germany: '🇩🇪',
-  FR: '🇫🇷',
-  France: '🇫🇷',
-  NL: '🇳🇱',
-  Netherlands: '🇳🇱',
-  SE: '🇸🇪',
-  Sweden: '🇸🇪',
-  JP: '🇯🇵',
-  Japan: '🇯🇵',
-  SG: '🇸🇬',
-  Singapore: '🇸🇬',
-}
+import { STATUS_BADGES, COUNTRY_FLAGS } from '../components/agent/AgentConstants.js'
 
 export default function AgentPanel({ session }) {
   // Navigation & State
