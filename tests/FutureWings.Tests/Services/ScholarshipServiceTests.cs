@@ -1,41 +1,4 @@
 using FutureWings.Domain.Entities;
-<<<<<<< HEAD
-using FutureWings.Infrastructure.Services;
-
-namespace FutureWings.Tests.Services;
-
-public class ScholarshipServiceTests
-{
-    [Fact]
-    public async Task GetAllAsync_ReturnsAllScholarships()
-    {
-        using var context = TestDbContextFactory.Create();
-        context.Countries.Add(new Country { Id = 1, Name = "Canada", Code = "CA" });
-        context.Scholarships.AddRange(
-            new Scholarship { Id = 1, CountryId = 1, Name = "Merit Award" },
-            new Scholarship { Id = 2, CountryId = 1, Name = "Need-Based Grant" }
-        );
-        context.SaveChanges();
-
-        var service = new ScholarshipService(context);
-        var result = await service.GetAllAsync();
-
-        Assert.Equal(2, result.Count);
-        Assert.Contains(result, s => s.Name == "Merit Award");
-        Assert.Contains(result, s => s.Name == "Need-Based Grant");
-        Assert.All(result, s => Assert.Equal(10000m, s.AwardAmount));
-    }
-
-    [Fact]
-    public async Task GetAllAsync_ReturnsEmptyWhenNoScholarships()
-    {
-        using var context = TestDbContextFactory.Create();
-        var service = new ScholarshipService(context);
-
-        var result = await service.GetAllAsync();
-
-        Assert.Empty(result);
-=======
 using FutureWings.Infrastructure.Data;
 using FutureWings.Infrastructure.Services;
 using FutureWings.Web.Controllers;
@@ -67,7 +30,8 @@ public sealed class ScholarshipServiceTests
     [Fact]
     public async Task GetAll_FiltersByCountry()
     {
-        await using var context = CreateContext(); Seed(context);
+        await using var context = CreateContext();
+        Seed(context);
         var results = await new ScholarshipService(context).GetAllAsync(countryId: 2);
         Assert.All(results, item => Assert.Equal("Germany", item.CountryName));
         Assert.Single(results);
@@ -78,7 +42,8 @@ public sealed class ScholarshipServiceTests
     [InlineData("germany", "Berlin Scholars")]
     public async Task GetAll_SearchesNameAndCountryCaseInsensitively(string search, string expected)
     {
-        await using var context = CreateContext(); Seed(context);
+        await using var context = CreateContext();
+        Seed(context);
         var result = Assert.Single(await new ScholarshipService(context).GetAllAsync(search: search));
         Assert.Equal(expected, result.Name);
     }
@@ -88,6 +53,15 @@ public sealed class ScholarshipServiceTests
     {
         await using var context = CreateContext();
         Assert.Null(await new ScholarshipService(context).GetByIdAsync(404));
+    }
+
+    [Fact]
+    public async Task GetAllAsync_ReturnsEmptyWhenNoScholarships()
+    {
+        await using var context = CreateContext();
+        var service = new ScholarshipService(context);
+        var result = await service.GetAllAsync();
+        Assert.Empty(result);
     }
 
     private static FutureWingsDbContext CreateContext() => new(
@@ -100,6 +74,5 @@ public sealed class ScholarshipServiceTests
             new Scholarship { Id = 1, CountryId = 1, Name = "Maple Award", EligibilityCriteria = "Strong academic record", AwardAmount = 25_000m, Deadline = DateTimeOffset.UtcNow.AddMonths(2) },
             new Scholarship { Id = 2, CountryId = 2, Name = "Berlin Scholars", EligibilityCriteria = "International students", AwardAmount = 15_000m, Deadline = DateTimeOffset.UtcNow.AddMonths(3) });
         context.SaveChanges();
->>>>>>> 69dd190b0bbe9e1b599cb3fa6242e2df87a7cda8
     }
 }

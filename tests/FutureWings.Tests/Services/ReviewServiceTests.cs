@@ -7,7 +7,7 @@ namespace FutureWings.Tests.Services;
 public class ReviewServiceTests
 {
     [Fact]
-    public async Task AddReviewAsync_StoresReviewWithClampedScore()
+    public async Task AddReviewAsync_StoresReviewAndReturnsDetails()
     {
         using var context = TestDbContextFactory.Create();
         context.Users.Add(new User { Id = 1, Email = "student@test.com" });
@@ -16,22 +16,25 @@ public class ReviewServiceTests
         context.SaveChanges();
 
         var service = new ReviewService(context);
-        await service.AddReviewAsync(new ReviewDto
+        var result = await service.AddReviewAsync(1, new ReviewCreateDto
         {
-            UserId = 1,
             UniversityId = 1,
             Score = 4,
             Comment = "Great university!"
         });
 
-        var reviews = await service.GetUniversityReviewsAsync(1);
+        Assert.NotNull(result);
+        Assert.Equal(4, result.Score);
+        Assert.Equal("Great university!", result.Comment);
+        Assert.True(result.IsMine);
+
+        var reviews = await service.GetUniversityReviewsAsync(1, 1);
         Assert.Single(reviews);
         Assert.Equal(4, reviews[0].Score);
-        Assert.Equal("Great university!", reviews[0].Comment);
     }
 
     [Fact]
-    public async Task AddReviewAsync_ClampsScoreToValidRange()
+    public async Task AddReviewAsync_RejectsInvalidScore()
     {
         using var context = TestDbContextFactory.Create();
         context.Users.Add(new User { Id = 1, Email = "student@test.com" });
@@ -41,23 +44,20 @@ public class ReviewServiceTests
 
         var service = new ReviewService(context);
 
-        await service.AddReviewAsync(new ReviewDto { UserId = 1, UniversityId = 1, Score = 10, Comment = "Too high" });
-        await service.AddReviewAsync(new ReviewDto { UserId = 1, UniversityId = 1, Score = -1, Comment = "Too low" });
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.AddReviewAsync(1, new ReviewCreateDto { UniversityId = 1, Score = 6 }));
 
-        var reviews = await service.GetUniversityReviewsAsync(1);
-        Assert.Equal(2, reviews.Count);
-        Assert.Equal(5, reviews[0].Score);  // Clamped from 10
-        Assert.Equal(1, reviews[1].Score);  // Clamped from -1
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.AddReviewAsync(1, new ReviewCreateDto { UniversityId = 1, Score = 0 }));
     }
 
     [Fact]
-    public async Task GetUniversityReviewsAsync_ReturnsEmptyForUnreviewedUniversity()
+    public async Task GetUniversityReviewsAsync_ThrowsForNonExistentUniversity()
     {
         using var context = TestDbContextFactory.Create();
         var service = new ReviewService(context);
 
-        var reviews = await service.GetUniversityReviewsAsync(999);
-
-        Assert.Empty(reviews);
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            service.GetUniversityReviewsAsync(999, 1));
     }
 }
