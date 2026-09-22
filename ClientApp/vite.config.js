@@ -20,7 +20,7 @@ export default defineConfig({
           if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
             return 'react-vendor'
           }
-          if (id.includes('node_modules/reactflow/')) {
+          if (id.includes('node_modules/@xyflow/')) {
             return 'flow-vendor'
           }
           if (id.includes('node_modules/@mediapipe/')) {
