@@ -1,0 +1,58 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  backend:
+    name: Build & Test Backend (.NET 8)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore FutureWings.sln
+
+      - name: Build solution
+        run: dotnet build FutureWings.sln --no-restore --configuration Release
+
+      - name: Run unit & integration tests
+        run: dotnet test FutureWings.sln --no-build --configuration Release --verbosity normal
+
+  frontend:
+    name: Build & Lint Frontend (React 19 + Vite)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ClientApp
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+          cache-dependency-path: ClientApp/package.json
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Build production bundle
+        run: npm run build
