@@ -32,7 +32,13 @@ export async function authenticate(endpoint, credentials) {
   const body = await response.json().catch(() => ({}))
   if (!response.ok) {
     const validationMessage = body.errors ? Object.values(body.errors).flat().join(' ') : null
-    throw new Error(body.message || validationMessage || 'Authentication failed. Please try again.')
+    const problemMessage = body.detail || (body.title && body.status < 500 ? body.title : null)
+    const fallback = response.status >= 500
+      ? 'The server could not complete your request. Please try again in a moment.'
+      : response.status === 409
+        ? 'An account with this email already exists. Try signing in instead.'
+        : 'Authentication failed. Please check your details and try again.'
+    throw new Error(body.message || validationMessage || problemMessage || fallback)
   }
   return body
 }

@@ -42,6 +42,7 @@ public sealed class DiscoveryService(FutureWingsDbContext context) : IDiscoveryS
             .Select(program => new
             {
                 program.Id,
+                program.UniversityId,
                 program.Name,
                 University = program.University.Name,
                 Country = program.University.Country.Name,
@@ -72,6 +73,7 @@ public sealed class DiscoveryService(FutureWingsDbContext context) : IDiscoveryS
             Programs = rows.Select(row => new DiscoveryProgramDto
             {
                 Id = row.Id,
+                UniversityId = row.UniversityId,
                 Name = row.Name,
                 University = row.University,
                 Country = row.Country,
