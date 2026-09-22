@@ -76,10 +76,44 @@ const getWorkspaceTitle = (role) => {
 const initials = (session) =>
   `${session.firstName?.[0] ?? ''}${session.lastName?.[0] ?? ''}`.toUpperCase() || 'FW'
 
+const pageToSlug = (page) => page.toLowerCase().replace(/ & /g, '-').replace(/\s+/g, '-')
+
+const slugToPageMap = {
+  dashboard: 'Dashboard',
+  roadmap: 'Roadmap',
+  discovery: 'Discovery',
+  documents: 'Documents',
+  profile: 'Profile',
+  recommendations: 'Recommendations',
+  applications: 'Applications',
+  'visa-check': 'Visa Check',
+  scholarships: 'Scholarships',
+  community: 'Community',
+  'ai-interview': 'AI Interview',
+  plans: 'Plans',
+  'agent-panel': 'Agent Panel',
+  'revenue-finance': 'Revenue & Finance',
+  'user-management': 'User Management',
+  'applications-oversight': 'Applications Oversight',
+  'academic-catalog': 'Academic Catalog',
+  'scholarships-manager': 'Scholarships Manager',
+  login: 'Login',
+  register: 'Register',
+  home: 'Home',
+}
+
+const getPageFromHash = () => {
+  if (typeof window === 'undefined') return null
+  const hash = window.location.hash.replace(/^#\/?/, '').toLowerCase()
+  return slugToPageMap[hash] || null
+}
+
 function App() {
   const [session, setSession] = useState(loadSession)
   const [activePage, setActivePage] = useState(() => {
     const s = loadSession()
+    const fromHash = getPageFromHash()
+    if (fromHash) return fromHash
     return s ? getDefaultPage(s.role) : 'Home'
   })
   const [menuOpen, setMenuOpen] = useState(false)
@@ -153,9 +187,21 @@ function App() {
     setMenuOpen(false)
   }
 
+  useEffect(() => {
+    const handleHashChange = () => {
+      const page = getPageFromHash()
+      if (page) setActivePage(page)
+    }
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [])
+
   const goTo = (page) => {
     setActivePage(page)
     setMenuOpen(false)
+    if (typeof window !== 'undefined') {
+      window.location.hash = `#/${pageToSlug(page)}`
+    }
   }
 
   if (!session) {
