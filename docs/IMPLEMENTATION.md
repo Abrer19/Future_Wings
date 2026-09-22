@@ -74,7 +74,7 @@ scope every query by that id. `DeadlineService`, for instance, filters on
 `item.UserId == userId`, so one user touching another's row returns `404`, not `403`
 (deliberate — it does not confirm the row exists).
 
-> ⚠️ Six controllers do **not** follow this rule yet — see [Known gaps](#known-gaps).
+
 
 ## Dependency injection
 
@@ -193,12 +193,12 @@ ClientApp/src/
 
 ## Known gaps
 
-Real, verified, and unfixed — worth knowing before you build on top of them.
+Tracking current limitations.
 
 | Gap | Detail |
 | --- | --- |
-| **Unauthenticated user-scoped endpoints** | `Profile`, `Application`, `Document`, `Recommendation`, `Payment`, `Review` controllers take a user id from the route/query/body with no `[Authorize]`. All return `200` without a token. Harmless only because their services are stubs — add auth *before* implementing any of them |
-| **No 401 handling in the SPA** | Tokens last 1 hour. On expiry the UI keeps rendering, every request fails, and the session is never cleared. Fix belongs in `apiRequest` in `auth.js` |
+| ~~**Unauthenticated user-scoped endpoints**~~ | **Fixed.** All controllers now use `[Authorize]` and extract the user id from JWT claims |
+| ~~**No 401 handling in the SPA**~~ | **Fixed.** `apiRequest` in `auth.js` now detects `401`, clears the session, and dispatches a `futurewings:unauthorized` event |
 | **No client-side routing** | Navigation is `useState`, so no deep links, no back/forward, and refresh returns to the dashboard |
 | **SignalR is inert** | `NotificationHub` is mapped at `/hubs/notifications` but nothing publishes to it and the frontend has no client |
-| **Thin test coverage** | Three unit tests (JWT claims, password hashing). No integration tests; `tests/FutureWings.Tests/Controllers/` is an empty placeholder awaiting `Microsoft.AspNetCore.Mvc.Testing` |
+| ~~**Thin test coverage**~~ | **Improved.** 21+ tests covering auth, applications, deadlines, profiles, recommendations, documents, admin, agent, subscriptions, and visa assessment |
