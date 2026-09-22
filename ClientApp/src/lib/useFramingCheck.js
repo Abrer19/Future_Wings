@@ -161,7 +161,7 @@ export function useFramingCheck() {
           minDetectionConfidence: 0.5,
         })
       } catch (gpuError) {
-        console.warn('GPU delegate failed for MediaPipe face detector, falling back to CPU:', gpuError)
+        // GPU delegate unavailable — fall back to CPU silently
         detector = await FaceDetector.createFromOptions(vision, {
           baseOptions: { modelAssetPath: MODEL_URL, delegate: 'CPU' },
           runningMode: 'VIDEO',
@@ -208,13 +208,13 @@ export function useFramingCheck() {
             }])
           }
         } catch (detectError) {
-          console.warn('MediaPipe detect frame warning:', detectError)
+          // Frame detection failed — skip this sample
         } finally {
           busyRef.current = false
         }
       }, SAMPLE_TICK_MS)
     } catch (modelError) {
-      console.warn('MediaPipe model load error (camera will remain live without AI framing):', modelError)
+      // Model load failed — camera remains active without AI framing feedback
       setDetectorStatus('offline')
       // Camera is still active, just detector is offline
       if (status !== 'error') {
