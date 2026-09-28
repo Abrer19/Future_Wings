@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import ReactFlow, { Background, Controls, Handle, Position } from 'reactflow'
-import 'reactflow/dist/style.css'
+import { Background, Controls, Handle, Position, ReactFlow } from '@xyflow/react'
+import '@xyflow/react/dist/style.css'
 import { apiRequest } from '../auth.js'
 import { BTN_PRIMARY, CARD } from '../components/ui/styles.js'
 import { FIELDS, NODE_KINDS, buildRoadmapGraph, isSet } from '../lib/buildRoadmapGraph.js'
