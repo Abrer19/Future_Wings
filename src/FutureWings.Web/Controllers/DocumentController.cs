@@ -6,6 +6,11 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace FutureWings.Web.Controllers;
 
+public class DocumentUploadForm
+{
+    public IFormFile File { get; set; } = null!;
+}
+
 [Authorize]
 [ApiController]
 [Route("api/documents")]
@@ -15,10 +20,12 @@ public class DocumentController(IDocumentService documentService) : ControllerBa
     public async Task<IActionResult> GetAll() => Ok(await documentService.GetAllAsync(GetUserId()));
 
     [HttpPost]
+    [Consumes("multipart/form-data")]
     [RequestSizeLimit(11 * 1024 * 1024)]
-    public async Task<IActionResult> Upload([FromForm] IFormFile file)
+    public async Task<IActionResult> Upload([FromForm] DocumentUploadForm form)
     {
-        if (file.Length == 0) return BadRequest(new { Message = "Choose a non-empty file." });
+        var file = form.File;
+        if (file == null || file.Length == 0) return BadRequest(new { Message = "Choose a non-empty file." });
         await using var stream = new MemoryStream();
         await file.CopyToAsync(stream);
         var result = await documentService.UploadAsync(GetUserId(), new DocumentUploadDto
