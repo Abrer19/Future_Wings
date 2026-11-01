@@ -26,29 +26,61 @@ public class DocumentController(IDocumentService documentService) : ControllerBa
     {
         var file = form.File;
         if (file == null || file.Length == 0) return BadRequest(new { Message = "Choose a non-empty file." });
-        await using var stream = new MemoryStream();
-        await file.CopyToAsync(stream);
-        var result = await documentService.UploadAsync(GetUserId(), new DocumentUploadDto
+        if (file.Length > 10 * 1024 * 1024) return BadRequest(new { Message = "File exceeds maximum size of 10 MB." });
+
+        try
         {
-            FileName = file.FileName,
-            ContentType = file.ContentType,
-            Content = stream.ToArray(),
-        });
-        return CreatedAtAction(nameof(Download), new { documentId = result.Id }, result);
+            await using var stream = new MemoryStream();
+            await file.CopyToAsync(stream);
+            var result = await documentService.UploadAsync(GetUserId(), new DocumentUploadDto
+            {
+                FileName = file.FileName,
+                ContentType = file.ContentType,
+                Content = stream.ToArray(),
+            });
+            return CreatedAtAction(nameof(Download), new { documentId = result.Id }, result);
+        }
+        catch (ArgumentException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
     }
 
     [HttpGet("{documentId:int}/download")]
     public async Task<IActionResult> Download(int documentId)
     {
-        var document = await documentService.DownloadAsync(GetUserId(), documentId);
-        return File(document.Content, document.ContentType, document.FileName);
+        try
+        {
+            var document = await documentService.DownloadAsync(GetUserId(), documentId);
+            Response.Headers.Append("X-Content-Type-Options", "nosniff");
+            return File(document.Content, document.ContentType, document.FileName);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (FileNotFoundException)
+        {
+            return NotFound(new { message = "The stored file could not be found." });
+        }
     }
 
     [HttpDelete("{documentId:int}")]
     public async Task<IActionResult> Delete(int documentId)
     {
-        await documentService.DeleteAsync(GetUserId(), documentId);
-        return NoContent();
+        try
+        {
+            await documentService.DeleteAsync(GetUserId(), documentId);
+            return NoContent();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
     }
 
     private int GetUserId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);

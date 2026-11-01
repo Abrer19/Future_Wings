@@ -7,62 +7,66 @@ namespace FutureWings.Infrastructure.Data;
 
 public static class DemoUserSeeder
 {
-    public static async Task SeedAsync(FutureWingsDbContext context)
+    public static async Task SeedAsync(FutureWingsDbContext context, bool seedStaffAccounts = false)
     {
-        // Seed Admin User
-        var adminUser = await context.Users.FirstOrDefaultAsync(u => u.Email == "admin@futurewings.io");
-        if (adminUser is null)
+        // Privileged staff accounts (Admin / Agent) are only seeded when explicitly enabled.
+        if (seedStaffAccounts)
         {
-            var adminHash = BCrypt.Net.BCrypt.HashPassword("Password123!");
-            adminUser = new User
+            // Seed Admin User
+            var adminUser = await context.Users.FirstOrDefaultAsync(u => u.Email == "admin@futurewings.io");
+            if (adminUser is null)
             {
-                Email = "admin@futurewings.io",
-                PasswordHash = adminHash,
-                Role = "Admin",
-                SubscriptionTier = "Premium",
-                SubscriptionRenewsAt = DateTimeOffset.UtcNow.AddYears(1),
-                Profile = new UserProfile
+                var adminHash = BCrypt.Net.BCrypt.HashPassword("Password123!");
+                adminUser = new User
                 {
-                    FirstName = "Sarah",
-                    LastName = "Jenkins",
-                    Major = "Higher Education Administration",
-                    DegreeLevel = "Doctorate"
-                }
-            };
-            context.Users.Add(adminUser);
-        }
-        else
-        {
-            adminUser.Role = "Admin";
-        }
+                    Email = "admin@futurewings.io",
+                    PasswordHash = adminHash,
+                    Role = "Admin",
+                    SubscriptionTier = "Premium",
+                    SubscriptionRenewsAt = DateTimeOffset.UtcNow.AddYears(1),
+                    Profile = new UserProfile
+                    {
+                        FirstName = "Sarah",
+                        LastName = "Jenkins",
+                        Major = "Higher Education Administration",
+                        DegreeLevel = "Doctorate"
+                    }
+                };
+                context.Users.Add(adminUser);
+            }
+            else
+            {
+                adminUser.Role = "Admin";
+            }
 
-        // Seed Country Agent User
-        var agentUser = await context.Users.FirstOrDefaultAsync(u => u.Email == "agent@futurewings.io");
-        if (agentUser is null)
-        {
-            var agentHash = BCrypt.Net.BCrypt.HashPassword("Password123!");
-            agentUser = new User
+            // Seed Country Agent User
+            var agentUser = await context.Users.FirstOrDefaultAsync(u => u.Email == "agent@futurewings.io");
+            if (agentUser is null)
             {
-                Email = "agent@futurewings.io",
-                PasswordHash = agentHash,
-                Role = "Agent",
-                SubscriptionTier = "Pro",
-                SubscriptionRenewsAt = DateTimeOffset.UtcNow.AddYears(1),
-                Profile = new UserProfile
+                var agentHash = BCrypt.Net.BCrypt.HashPassword("Password123!");
+                agentUser = new User
                 {
-                    FirstName = "Marcus",
-                    LastName = "Vance",
-                    Major = "International Student Admissions",
-                    DegreeLevel = "Master's"
-                }
-            };
-            context.Users.Add(agentUser);
+                    Email = "agent@futurewings.io",
+                    PasswordHash = agentHash,
+                    Role = "Agent",
+                    SubscriptionTier = "Pro",
+                    SubscriptionRenewsAt = DateTimeOffset.UtcNow.AddYears(1),
+                    Profile = new UserProfile
+                    {
+                        FirstName = "Marcus",
+                        LastName = "Vance",
+                        Major = "International Student Admissions",
+                        DegreeLevel = "Master's"
+                    }
+                };
+                context.Users.Add(agentUser);
+            }
+            else
+            {
+                agentUser.Role = "Agent";
+            }
+            await context.SaveChangesAsync();
         }
-        else
-        {
-            agentUser.Role = "Agent";
-        }
-        await context.SaveChangesAsync();
 
         const string demoEmail = "demo@futurewings.io";
         var demoUser = await context.Users

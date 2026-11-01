@@ -23,12 +23,13 @@ public sealed class AuthService(
             throw new InvalidOperationException("An account with this email already exists.");
         }
 
-        var isFirstUser = !await context.Users.AnyAsync();
+        // All public registrations strictly create standard Student accounts.
+        // Administrative accounts cannot be created via public registration.
         var user = new User
         {
             Email = email,
             PasswordHash = passwordHasher.HashPassword(request.Password),
-            Role = isFirstUser ? "Admin" : "Student",
+            Role = "Student",
             Profile = new UserProfile
             {
                 FirstName = request.FirstName.Trim(),
@@ -42,6 +43,36 @@ public sealed class AuthService(
         await SeedOnboardingDeadlinesAsync(user);
 
         return CreateResponse(user);
+    }
+
+    public async Task<AuthResponseDto> BootstrapAdminAsync(RegisterDto request)
+    {
+        var email = NormalizeEmail(request.Email);
+        var existing = await context.Users.Include(u => u.Profile).SingleOrDefaultAsync(u => u.Email == email);
+        if (existing is not null)
+        {
+            existing.Role = "Admin";
+            existing.PasswordHash = passwordHasher.HashPassword(request.Password);
+            await context.SaveChangesAsync();
+            return CreateResponse(existing);
+        }
+
+        var adminUser = new User
+        {
+            Email = email,
+            PasswordHash = passwordHasher.HashPassword(request.Password),
+            Role = "Admin",
+            Profile = new UserProfile
+            {
+                FirstName = string.IsNullOrWhiteSpace(request.FirstName) ? "System" : request.FirstName.Trim(),
+                LastName = string.IsNullOrWhiteSpace(request.LastName) ? "Admin" : request.LastName.Trim()
+            }
+        };
+
+        context.Users.Add(adminUser);
+        await context.SaveChangesAsync();
+        await SeedOnboardingDeadlinesAsync(adminUser);
+        return CreateResponse(adminUser);
     }
 
     /// <summary>

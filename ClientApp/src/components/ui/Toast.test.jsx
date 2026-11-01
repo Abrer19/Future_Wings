@@ -4,7 +4,7 @@ import Toast from './Toast.jsx'
 
 describe('Toast component', () => {
   it('renders nothing inside role=status when message is empty or null', () => {
-    const { container } = render(<Toast message={null} />)
+    render(<Toast message={null} />)
     const status = screen.getByRole('status')
     expect(status).toBeInTheDocument()
     expect(status).toBeEmptyDOMElement()

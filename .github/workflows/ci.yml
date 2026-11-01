@@ -46,13 +46,16 @@ jobs:
         with:
           node-version: '20.x'
           cache: 'npm'
-          cache-dependency-path: ClientApp/package.json
+          cache-dependency-path: ClientApp/package-lock.json
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run linter
         run: npm run lint
+
+      - name: Run unit tests
+        run: npm test
 
       - name: Build production bundle
         run: npm run build

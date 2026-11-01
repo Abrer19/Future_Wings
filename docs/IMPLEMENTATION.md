@@ -52,16 +52,21 @@ Services take `FutureWingsDbContext` directly via primary constructor. There is 
 repository or unit-of-work layer — an unused `GenericRepository<T>` existed once and was
 deleted. `DbContext` is already both.
 
-## Authentication
+## Authentication & Authorization
 
 1. `POST /api/auth/register` — `AuthService.RegisterAsync` normalises the email to
    lowercase, rejects duplicates, hashes the password with BCrypt, and creates the `User`
    plus its `UserProfile` in one `SaveChangesAsync`.
-2. **The first user in the database becomes `Admin`** (`isFirstUser` check); everyone
-   after is `Student`.
-3. Onboarding deadlines are seeded immediately after the user is persisted, guarded by
+2. **Every public registration creates a `Student` role.** First-user privilege escalation has
+   been removed. Administrative accounts cannot be created via public registration.
+3. **Safe Local Admin Bootstrapping**: In development environments, local judges and testers can
+   explicitly create or promote an admin account via `POST /api/auth/bootstrap-admin` (which is
+   inaccessible in Production) or by launching with `FUTUREWINGS_SEED_STAFF=true`.
+4. **Rate Limiting**: Built-in ASP.NET Core rate limiting (`auth-policy`, 10 requests per minute)
+   protects `POST /api/auth/register` and `POST /api/auth/login` against brute force attempts.
+5. Onboarding deadlines are seeded immediately after the user is persisted, guarded by
    the `User.HasSeededDeadlines` flag. See [DATABASE.md](DATABASE.md#seeding).
-4. `JwtTokenService` issues an HS256 token with `NameIdentifier`, `Email`, `Role`, `Jti`,
+6. `JwtTokenService` issues an HS256 token with `NameIdentifier`, `Email`, `Role`, `Jti`,
    valid for **1 hour**.
 
 The signing key comes from `Jwt:Secret` (user-secrets in Development, `Jwt__Secret` env
@@ -74,7 +79,46 @@ scope every query by that id. `DeadlineService`, for instance, filters on
 `item.UserId == userId`, so one user touching another's row returns `404`, not `403`
 (deliberate — it does not confirm the row exists).
 
+## Document Storage & Persistence
 
+Document uploads enforce strict multi-layer security:
+- **Magic Bytes Validation**: Uploaded files must match their declared extension and valid binary signatures (`%PDF` for PDF, `\x89PNG` for PNG, `\xFF\xD8\xFF` for JPEG, `\xD0\xCF\x11\xE0` for DOC, `PK\x03\x04` for DOCX). Mismatched MIME types or spoofed file extensions are rejected.
+- **Path Traversal Protection**: Uploaded file names are strictly sanitized with `Path.GetFileName` and stored on disk under randomly generated GUID identifiers (`{Guid:N}{ext}`). The physical path is validated to remain inside the canonical storage directory.
+- **Atomic Operations & Cleanup**: If database persistence fails during an upload, the written file is automatically removed. When a document is deleted, the database row and physical file are both purged.
+- **Persistence Across Restarts**: Stored documents reside in `App_Data/documents` by default, configurable via `DocumentStorage:Path` (`DocumentStorage__Path` env var). In Docker deployments, this path is mounted to the named volume `document-data:/app/App_Data/documents`.
+
+## Subscriptions, Stripe & Idempotency
+
+- **Judge Demo Simulation**: Simulated upgrade is enabled only in Development when `FUTUREWINGS_DEMO_MODE=true` or demo keys are used. Simulated checkouts are strictly rejected in Production or whenever a real Stripe secret key is configured.
+- **Return URL Validation**: Return URLs passed to Stripe checkout must be well-formed HTTP/HTTPS URLs matching configured frontend origins (`Cors:AllowedOrigins` or `CORS_ALLOWED_ORIGINS`). Arbitrary external redirect targets are rejected.
+- **Webhook Idempotency**: Stripe webhook events are tracked in the database (`ProcessedWebhookEvents` table). Replayed `checkout.session.completed` events do not create duplicate payments or reapply state.
+- **Metadata Verification**: The webhook verifies `userId`, `tier`, and `session.SubscriptionId` before granting access.
+
+## Judge Demo & Production Deployment
+
+### 1. Judge Demo Mode (Local Testing)
+To run with pre-seeded judge data and simulated payments:
+```bash
+# Run in Development mode with demo flag:
+export ASPNETCORE_ENVIRONMENT=Development
+export FUTUREWINGS_DEMO_MODE=true
+
+# Optional: seed privileged Admin and Agent demo accounts:
+export FUTUREWINGS_SEED_STAFF=true
+```
+Pre-seeded credentials for local evaluation:
+- **Student Demo**: `demo@futurewings.io` / `Password123!` (Pre-configured Pro tier, active applications, deadlines, documents, and notifications)
+- **Admin Demo** (when staff seeded): `admin@futurewings.io` / `Password123!`
+- **Agent Demo** (when staff seeded): `agent@futurewings.io` / `Password123!`
+
+### 2. Production Deployment
+In production, demo mode and simulated checkout are strictly forbidden:
+- `ASPNETCORE_ENVIRONMENT=Production`
+- `FUTUREWINGS_DEMO_MODE=false` (or unset)
+- `CORS_ALLOWED_ORIGINS=https://app.futurewings.io`
+- `DocumentStorage__Path=/app/App_Data/documents` (backed by persistent block storage or volume)
+- Set real `Stripe__SecretKey`, `Stripe__PublishableKey`, and `Stripe__WebhookSecret`.
+- Reverse Proxy: FutureWings API runs on HTTP port 5002 inside Docker. In production, place it behind a TLS-terminating reverse proxy (such as Nginx, Traefik, or AWS ALB) that provides SSL/TLS certificates and forwards `X-Forwarded-For` and `X-Forwarded-Proto` headers.
 
 ## Dependency injection
 
@@ -88,68 +132,6 @@ builder.Services.AddScoped<IDeadlineService, DeadlineService>();
 
 `JwtTokenService`, `PasswordHasherService`, and `StripePaymentService` are registered as
 concrete types (no interface). `GeminiAiService` uses `AddHttpClient<>`.
-
-## The stub convention
-
-Eight services are placeholders that return fixed values and never touch the database.
-Each carries an XML doc comment beginning `STUB:` naming the exact fake value:
-
-```csharp
-/// <summary>
-/// STUB: not implemented. Always returns an empty list; no matching logic exists yet.
-/// ...
-/// </summary>
-public class RecommendationService : IRecommendationService
-```
-
-Find them all:
-
-```powershell
-Select-String -Path src/FutureWings.Infrastructure/Services/*.cs -Pattern "STUB:"
-```
-
-Currently: `ApplicationService`, `DocumentService`, `PaymentService`, `ProfileService`,
-`RecommendationService`, `ReviewService`, `ScholarshipService`.
-
-## Visa Check
-
-`POST /api/visa/evaluate` accepts student evidence and returns a 0–100 preparation
-risk score, reasons, and actionable recommendations. `GET
-/api/visa/application/{applicationId}/risk` builds a report from an owned tracked
-application and its program/profile data. Both endpoints require a JWT; the service
-also filters applications by the authenticated user ID. For a tracked application,
-the server uses stored tuition and destination instead of trusting client values.
-
-The report is a deterministic planning heuristic. Living-cost and IELTS values are
-rough benchmarks, not official thresholds or refusal probabilities. Visa evidence
-is not stored in the current schema: a GET report treats funding proof, language
-results, and home-country ties as unknown until the student enters them in the
-interactive assessment. Rechecking official destination and program requirements
-is always part of the checklist.
-
-**Never build on a stub's return value.** They are wired into DI and return `200`, so
-they look functional from the outside.
-
-## Adding a feature end to end
-
-1. **Entity** — add to `Domain/Entities/`, no attributes or usings.
-2. **DbSet + configuration** — register in `FutureWingsDbContext`, and configure
-   `HasMaxLength`/`HasPrecision`/indexes in `OnModelCreating`. Skipping this gives you
-   `nvarchar(max)` columns (see [DATABASE.md](DATABASE.md#column-sizing)).
-3. **Migration** — `dotnet ef migrations add <Name>` (see [DATABASE.md](DATABASE.md#adding-a-migration)).
-4. **DTOs** — `Application/DTOs/<Feature>/`. Put `DataAnnotations` here; they drive the
-   automatic `400` from `[ApiController]`.
-5. **Interface** — `Application/Interfaces/IXService.cs`.
-6. **Implementation** — `Infrastructure/Services/XService.cs`, taking `FutureWingsDbContext`.
-7. **Register** — one line in `Program.cs`.
-8. **Controller** — `Web/Controllers/`, with `[Authorize]` and the user id from claims.
-9. **Frontend** — a page in `ClientApp/src/pages/` plus components in
-   `ClientApp/src/components/<feature>/`.
-
-Mirror client validation to the server's limits. A `MaxLength(200)` with no matching
-`maxLength` on the input surfaces the raw .NET message
-(*"The field Title must be a string or array type with a maximum length of '200'."*)
-directly in the UI.
 
 ## Error handling
 
@@ -187,18 +169,3 @@ ClientApp/src/
 - **Design tokens** are in `tailwind.config.js` — `primary` `#ff6b3d`, `secondary`
   `#51607a`, `accent`, `success`, `warning`, `danger`, `surface`. Use the named
   utilities (`bg-primary-500`), not arbitrary hex.
-- Tailwind only emits arbitrary values it can read **verbatim** in source. A class built
-  by interpolation (`` `bg-[${color}]` ``) silently produces no CSS. Store complete class
-  strings in data objects instead.
-
-## Known gaps
-
-Tracking current limitations.
-
-| Gap | Detail |
-| --- | --- |
-| ~~**Unauthenticated user-scoped endpoints**~~ | **Fixed.** All controllers now use `[Authorize]` and extract the user id from JWT claims |
-| ~~**No 401 handling in the SPA**~~ | **Fixed.** `apiRequest` in `auth.js` now detects `401`, clears the session, and dispatches a `futurewings:unauthorized` event |
-| **No client-side routing** | Navigation is `useState`, so no deep links, no back/forward, and refresh returns to the dashboard |
-| **SignalR is inert** | `NotificationHub` is mapped at `/hubs/notifications` but nothing publishes to it and the frontend has no client |
-| ~~**Thin test coverage**~~ | **Improved.** 21+ tests covering auth, applications, deadlines, profiles, recommendations, documents, admin, agent, subscriptions, and visa assessment |

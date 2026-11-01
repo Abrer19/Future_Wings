@@ -21,7 +21,9 @@ namespace FutureWings.Infrastructure.Services;
 /// Nothing here has a hardcoded key, and no tier is ever granted without a verified
 /// Stripe event — <see cref="ApplyWebhookAsync"/> is the only path that upgrades a user.
 /// </summary>
-public sealed class SubscriptionService(FutureWingsDbContext context, IConfiguration configuration)
+public sealed class SubscriptionService(
+    FutureWingsDbContext context,
+    IConfiguration configuration)
     : ISubscriptionService
 {
     private string? SecretKey => Get("Stripe:SecretKey");
@@ -40,19 +42,29 @@ public sealed class SubscriptionService(FutureWingsDbContext context, IConfigura
     private string? PriceIdFor(string tier) => Get($"Stripe:Prices:{tier}");
 
     public bool IsDemoKey =>
-        SecretKey is not null && (SecretKey.Contains("demo", StringComparison.OrdinalIgnoreCase) || SecretKey.StartsWith("sk_test_demo", StringComparison.OrdinalIgnoreCase));
+        SecretKey is not null && (SecretKey.StartsWith("sk_test_demo", StringComparison.OrdinalIgnoreCase) || SecretKey.StartsWith("pk_test_demo", StringComparison.OrdinalIgnoreCase));
 
     public bool StripeConfigured => SecretKey is not null;
 
+    private string CurrentEnvironment =>
+        configuration["ASPNETCORE_ENVIRONMENT"] ??
+        Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ??
+        "Development";
+
+    private bool IsProduction =>
+        string.Equals(CurrentEnvironment, "Production", StringComparison.OrdinalIgnoreCase);
+
     /// <summary>
     /// Fake checkout, for local development and demos.
+    /// Strictly disabled in Production.
     /// Enabled when in demo key mode, or when explicitly allowed in configuration without real live keys.
     /// </summary>
     public bool SimulationEnabled =>
-        IsDemoKey
+        !IsProduction &&
+        (IsDemoKey
         || (!StripeConfigured
             && bool.TryParse(configuration["Stripe:AllowSimulatedCheckout"], out var allowed)
-            && allowed);
+            && allowed));
 
     public IReadOnlyList<SubscriptionPlanDto> GetPlans() =>
         SubscriptionPlans.All.Select(plan => new SubscriptionPlanDto
@@ -96,6 +108,8 @@ public sealed class SubscriptionService(FutureWingsDbContext context, IConfigura
             throw new ArgumentException("Choose either the Pro or Premium plan.");
         }
 
+        ValidateReturnUrl(returnUrl);
+
         var secretKey = SecretKey;
         if (secretKey is null && !SimulationEnabled)
         {
@@ -116,10 +130,11 @@ public sealed class SubscriptionService(FutureWingsDbContext context, IConfigura
             }
 
             var demoSessionId = $"cs_test_demo_{Guid.NewGuid():N}";
+            var separator = returnUrl.Contains('?') ? "&" : "?";
             return new CheckoutSessionDto
             {
                 SessionId = demoSessionId,
-                CheckoutUrl = $"{returnUrl}?checkout=success&session_id={demoSessionId}&tier={tier}",
+                CheckoutUrl = $"{returnUrl}{separator}checkout=success&session_id={demoSessionId}&tier={tier}",
             };
         }
 
@@ -140,13 +155,15 @@ public sealed class SubscriptionService(FutureWingsDbContext context, IConfigura
             await context.SaveChangesAsync();
         }
 
+        var successSeparator = returnUrl.Contains('?') ? "&" : "?";
+        var cancelSeparator = returnUrl.Contains('?') ? "&" : "?";
         var session = await new SessionService().CreateAsync(new SessionCreateOptions
         {
             Mode = "subscription",
             Customer = user.StripeCustomerId,
             LineItems = [new SessionLineItemOptions { Price = priceId, Quantity = 1 }],
-            SuccessUrl = $"{returnUrl}?checkout=success",
-            CancelUrl = $"{returnUrl}?checkout=cancelled",
+            SuccessUrl = $"{returnUrl}{successSeparator}checkout=success",
+            CancelUrl = $"{returnUrl}{cancelSeparator}checkout=cancelled",
             // Echoed back on the webhook so the event can be tied to a user and tier
             // without trusting anything the browser sends.
             ClientReferenceId = user.Id.ToString(),
@@ -158,10 +175,10 @@ public sealed class SubscriptionService(FutureWingsDbContext context, IConfigura
 
     public async Task<SubscriptionStatusDto> SimulateUpgradeAsync(int userId, string tier)
     {
-        if (!SimulationEnabled)
+        if (IsProduction || !SimulationEnabled || (StripeConfigured && !IsDemoKey))
         {
             throw new InvalidOperationException(
-                "Simulated checkout is disabled. It is only available in development while no Stripe key is configured.");
+                "Simulated checkout is disabled. It is only available in development while no real Stripe key is configured.");
         }
 
         // Unlike real checkout, Free is allowed here: it is how a tester drops back down
@@ -208,15 +225,33 @@ public sealed class SubscriptionService(FutureWingsDbContext context, IConfigura
 
         // Throws if the signature does not verify — an unsigned or forged body can never
         // reach the tier-granting code below.
-        var stripeEvent = EventUtility.ConstructEvent(payload, signatureHeader, webhookSecret);
+        var stripeEvent = EventUtility.ConstructEvent(payload, signatureHeader, webhookSecret, throwOnApiVersionMismatch: false);
+
+        // Webhook Idempotency Check
+        if (await context.ProcessedWebhookEvents.AnyAsync(e => e.StripeEventId == stripeEvent.Id))
+        {
+            return true;
+        }
 
         switch (stripeEvent.Type)
         {
             case "checkout.session.completed":
             {
                 if (stripeEvent.Data.Object is not Session session) return false;
+
+                // Idempotency: verify this checkout session has not already been credited
+                if (!string.IsNullOrWhiteSpace(session.Id) &&
+                    await context.Payments.AnyAsync(p => p.Reference == session.Id))
+                {
+                    await RecordProcessedEventAsync(stripeEvent.Id, stripeEvent.Type);
+                    return true;
+                }
+
                 var (userId, tier) = ReadMetadata(session.Metadata, session.ClientReferenceId);
                 if (userId is null || tier is null) return false;
+
+                // Validate that subscription ID is present for subscription checkouts
+                if (string.IsNullOrWhiteSpace(session.SubscriptionId)) return false;
 
                 var user = await context.Users.SingleOrDefaultAsync(candidate => candidate.Id == userId);
                 if (user is null) return false;
@@ -235,6 +270,7 @@ public sealed class SubscriptionService(FutureWingsDbContext context, IConfigura
                     CreatedAt = DateTimeOffset.UtcNow,
                 });
 
+                await RecordProcessedEventAsync(stripeEvent.Id, stripeEvent.Type);
                 await context.SaveChangesAsync();
                 return true;
             }
@@ -250,12 +286,87 @@ public sealed class SubscriptionService(FutureWingsDbContext context, IConfigura
                 user.SubscriptionTier = SubscriptionPlans.Free;
                 user.StripeSubscriptionId = null;
                 user.SubscriptionRenewsAt = null;
+
+                await RecordProcessedEventAsync(stripeEvent.Id, stripeEvent.Type);
                 await context.SaveChangesAsync();
                 return true;
             }
 
             default:
                 return false;
+        }
+    }
+
+    private async Task RecordProcessedEventAsync(string eventId, string eventType)
+    {
+        if (string.IsNullOrWhiteSpace(eventId)) return;
+
+        if (!await context.ProcessedWebhookEvents.AnyAsync(e => e.StripeEventId == eventId))
+        {
+            context.ProcessedWebhookEvents.Add(new ProcessedWebhookEvent
+            {
+                StripeEventId = eventId,
+                EventType = eventType,
+                ProcessedAt = DateTimeOffset.UtcNow
+            });
+        }
+    }
+
+    private void ValidateReturnUrl(string returnUrl)
+    {
+        if (string.IsNullOrWhiteSpace(returnUrl))
+        {
+            throw new ArgumentException("Return URL is required.");
+        }
+
+        if (!Uri.TryCreate(returnUrl, UriKind.Absolute, out var uri))
+        {
+            throw new ArgumentException("Return URL must be a valid absolute URL.");
+        }
+
+        if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
+        {
+            throw new ArgumentException("Return URL must use http or https.");
+        }
+
+        var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins")
+            .GetChildren()
+            .Select(c => c.Value)
+            .Where(v => !string.IsNullOrWhiteSpace(v))
+            .Select(v => v!)
+            .ToArray();
+
+        if (allowedOrigins.Length == 0)
+        {
+            allowedOrigins = configuration["CORS_ALLOWED_ORIGINS"]?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                ?? Array.Empty<string>();
+        }
+
+        var isAllowed = false;
+        foreach (var allowed in allowedOrigins)
+        {
+            if (Uri.TryCreate(allowed, UriKind.Absolute, out var allowedUri) &&
+                string.Equals(allowedUri.Host, uri.Host, StringComparison.OrdinalIgnoreCase) &&
+                (allowedUri.Port == uri.Port || (allowedUri.IsDefaultPort && uri.IsDefaultPort)))
+            {
+                isAllowed = true;
+                break;
+            }
+        }
+
+        // Allow localhost and 127.0.0.1 in non-production environments
+        if (!isAllowed && !IsProduction)
+        {
+            if (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+                uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase))
+            {
+                isAllowed = true;
+            }
+        }
+
+        if (!isAllowed)
+        {
+            throw new ArgumentException("Return URL host is not in the approved origins list.");
         }
     }
 

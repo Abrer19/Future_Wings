@@ -2,6 +2,7 @@ using FutureWings.Application.DTOs.Auth;
 using FutureWings.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
@@ -9,8 +10,9 @@ namespace FutureWings.Web.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController(IAuthService authService) : ControllerBase
+public class AuthController(IAuthService authService, IHostEnvironment hostEnvironment) : ControllerBase
 {
+    [EnableRateLimiting("auth-policy")]
     [HttpPost("register")]
     public async Task<IActionResult> Register(RegisterDto request)
     {
@@ -29,6 +31,7 @@ public class AuthController(IAuthService authService) : ControllerBase
         }
     }
 
+    [EnableRateLimiting("auth-policy")]
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginDto request)
     {
@@ -39,6 +42,28 @@ public class AuthController(IAuthService authService) : ControllerBase
         catch (UnauthorizedAccessException exception)
         {
             return Unauthorized(new { message = exception.Message });
+        }
+    }
+
+    /// <summary>
+    /// Explicit local development-only administrative bootstrapping mechanism.
+    /// Strictly forbidden in Production.
+    /// </summary>
+    [HttpPost("bootstrap-admin")]
+    public async Task<IActionResult> BootstrapAdmin(RegisterDto request)
+    {
+        if (hostEnvironment.IsProduction())
+        {
+            return NotFound();
+        }
+
+        try
+        {
+            return Ok(await authService.BootstrapAdminAsync(request));
+        }
+        catch (Exception exception)
+        {
+            return BadRequest(new { message = exception.Message });
         }
     }
 
