@@ -15,6 +15,7 @@ A modern, full-stack study-abroad planning and application tracking platform. St
 
 | Document | Description |
 | --- | --- |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | Azure production cloud architecture, resource provisioning, Vercel frontend, and operations |
 | [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md) | Clean architecture rules, request flows, authentication, DI, and end-to-end feature guides |
 | [docs/DATABASE.md](docs/DATABASE.md) | Schema design, migrations history, reference seeders, and EF Core commands |
 | [ClientApp/README.md](ClientApp/README.md) | React 19 frontend setup, design tokens, and state management |

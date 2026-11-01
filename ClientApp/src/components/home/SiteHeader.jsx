@@ -1,20 +1,30 @@
 import { useEffect, useRef, useState } from 'react'
-import { CloseIcon, LogoMark, MenuIcon } from './icons.jsx'
+import { ArrowRightIcon, CloseIcon, LogoMark, MenuIcon } from './icons.jsx'
 
-const links = [
-  { label: 'Home', href: '#home' },
-  { label: 'About', href: '#features' },
-  { label: 'News', href: '#news' },
-  { label: 'Contact', href: '#contact' },
+const navLinks = [
+  { label: 'Product', href: '#product' },
+  { label: 'How It Works', href: '#how-it-works' },
+  { label: 'Destinations', href: '#destinations' },
+  { label: 'Scholarships', href: '#scholarships' },
+  { label: 'Community', href: '#community' },
+  { label: 'FAQ', href: '#faq' },
 ]
 
 export default function SiteHeader({ onSignIn, onSignUp }) {
   const [open, setOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   const toggleRef = useRef(null)
   const panelRef = useRef(null)
 
-  // Escape closes the mobile panel and returns focus to the control that opened it,
-  // so keyboard users are never stranded inside an expanded disclosure.
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 15)
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  // Keyboard navigation & Escape handling
   useEffect(() => {
     if (!open) return undefined
     const onKeyDown = (event) => {
@@ -27,33 +37,45 @@ export default function SiteHeader({ onSignIn, onSignUp }) {
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [open])
 
-  // Move focus into the panel when it opens.
+  // Focus trap into mobile drawer
   useEffect(() => {
-    if (open) panelRef.current?.querySelector('a')?.focus()
+    if (open) {
+      panelRef.current?.querySelector('a, button')?.focus()
+    }
   }, [open])
 
   return (
-    <header className="sticky top-0 z-40 border-b border-black/5 bg-white/80 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+    <header
+      className={`sticky top-0 z-40 transition-all duration-300 ${
+        scrolled
+          ? 'border-b border-secondary-200/80 bg-white/90 shadow-xs backdrop-blur-md'
+          : 'border-b border-transparent bg-white/70 backdrop-blur-sm'
+      }`}
+    >
+      <div className="mx-auto flex h-16 sm:h-20 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+        {/* Brand Logo */}
         <a
-          className="flex shrink-0 items-center gap-2 rounded-lg text-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+          className="flex shrink-0 items-center gap-2.5 rounded-xl text-primary-500 transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
           href="#home"
         >
-          <LogoMark className="h-5 w-5" />
-          <span className="text-base font-extrabold tracking-tight text-secondary-950">FutureWings</span>
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-primary-600 via-primary-500 to-amber-500 text-white shadow-sm shadow-primary-500/20">
+            <LogoMark className="h-5 w-5" />
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-lg font-black tracking-tight text-secondary-950">FutureWings</span>
+            <span className="rounded-md bg-primary-50 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-primary-700 ring-1 ring-primary-500/20">
+              AI
+            </span>
+          </div>
         </a>
 
-        <nav aria-label="Primary" className="hidden md:block">
-          <ul className="flex items-center gap-1">
-            {links.map((link, index) => (
+        {/* Desktop Navigation Links */}
+        <nav aria-label="Primary" className="hidden lg:block">
+          <ul className="flex items-center gap-1 rounded-full border border-secondary-200/70 bg-white/80 p-1 shadow-xs backdrop-blur-sm">
+            {navLinks.map((link) => (
               <li key={link.label}>
                 <a
-                  aria-current={index === 0 ? 'page' : undefined}
-                  className={
-                    index === 0
-                      ? 'rounded-full bg-primary-500 px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2'
-                      : 'rounded-full px-4 py-1.5 text-sm font-medium text-secondary-500 transition hover:bg-secondary-500/10 hover:text-secondary-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2'
-                  }
+                  className="rounded-full px-4 py-1.5 text-xs font-semibold text-secondary-600 transition hover:bg-secondary-100 hover:text-secondary-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                   href={link.href}
                 >
                   {link.label}
@@ -63,68 +85,94 @@ export default function SiteHeader({ onSignIn, onSignUp }) {
           </ul>
         </nav>
 
-        <div className="flex items-center gap-2">
+        {/* Authentication & CTA Controls */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
           <button
-            className="hidden rounded-full px-4 py-1.5 text-sm font-semibold text-secondary-500 transition hover:text-secondary-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 sm:block"
+            className="hidden sm:inline-flex rounded-full px-4 py-2 text-xs sm:text-sm font-bold text-secondary-700 transition hover:bg-secondary-100/80 hover:text-secondary-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
             onClick={onSignIn}
             type="button"
           >
-            Log In
+            Sign In
           </button>
           <button
-            className="rounded-full bg-primary-500 px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+            className="hidden sm:inline-flex group relative items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-primary-500 to-primary-600 px-5 py-2 text-xs sm:text-sm font-extrabold text-white shadow-md shadow-primary-500/25 transition hover:shadow-lg hover:shadow-primary-500/35 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
             onClick={onSignUp}
             type="button"
           >
-            Sign Up
+            <span>Get Started</span>
+            <ArrowRightIcon className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
           </button>
+
+          {/* Mobile Menu Button */}
           <button
             aria-controls="mobile-nav"
             aria-expanded={open}
-            aria-label={open ? 'Close menu' : 'Open menu'}
-            className="rounded-lg p-2 text-secondary-500 transition hover:bg-secondary-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 md:hidden"
-            onClick={() => setOpen((value) => !value)}
+            aria-label={open ? 'Close mobile navigation menu' : 'Open mobile navigation menu'}
+            className="rounded-xl border border-secondary-200 p-2 text-secondary-700 transition hover:bg-secondary-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 lg:hidden"
+            onClick={() => setOpen((current) => !current)}
             ref={toggleRef}
             type="button"
           >
-            {open ? <CloseIcon /> : <MenuIcon />}
+            {open ? <CloseIcon className="h-5 w-5" /> : <MenuIcon className="h-5 w-5" />}
           </button>
         </div>
       </div>
 
-      <nav
-        aria-label="Primary mobile"
-        className="border-t border-black/5 bg-white px-4 pb-4 pt-2 md:hidden"
-        hidden={!open}
-        id="mobile-nav"
-        ref={panelRef}
-      >
-        <ul className="grid gap-1">
-          {links.map((link) => (
-            <li key={link.label}>
-              <a
-                className="block rounded-lg px-3 py-2 text-sm font-medium text-secondary-500 transition hover:bg-secondary-500/10 hover:text-secondary-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-                href={link.href}
-                onClick={() => setOpen(false)}
+      {/* Mobile Navigation Drawer */}
+      {open && (
+        <div
+          className="fixed inset-0 top-16 sm:top-20 z-50 bg-secondary-950/40 backdrop-blur-xs lg:hidden animate-fadeIn"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            aria-label="Mobile Navigation Menu"
+            role="dialog"
+            className="mx-4 mt-3 rounded-3xl border border-secondary-200 bg-white p-6 shadow-2xl"
+            id="mobile-nav"
+            onClick={(e) => e.stopPropagation()}
+            ref={panelRef}
+          >
+            <nav>
+              <ul className="space-y-1">
+                {navLinks.map((link) => (
+                  <li key={link.label}>
+                    <a
+                      className="block rounded-xl px-4 py-2.5 text-sm font-bold text-secondary-800 transition hover:bg-secondary-50 hover:text-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                      href={link.href}
+                      onClick={() => setOpen(false)}
+                    >
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+
+            <div className="mt-6 border-t border-secondary-100 pt-5 space-y-2">
+              <button
+                className="w-full rounded-xl border border-secondary-200 py-2.5 text-sm font-bold text-secondary-800 transition hover:bg-secondary-50"
+                onClick={() => {
+                  setOpen(false)
+                  onSignIn?.()
+                }}
+                type="button"
               >
-                {link.label}
-              </a>
-            </li>
-          ))}
-          <li>
-            <button
-              className="mt-1 w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-secondary-500 transition hover:bg-secondary-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 sm:hidden"
-              onClick={() => {
-                setOpen(false)
-                onSignIn?.()
-              }}
-              type="button"
-            >
-              Log In
-            </button>
-          </li>
-        </ul>
-      </nav>
+                Sign In
+              </button>
+              <button
+                className="w-full rounded-xl bg-primary-500 py-2.5 text-sm font-extrabold text-white shadow-md transition hover:bg-primary-600"
+                onClick={() => {
+                  setOpen(false)
+                  onSignUp?.()
+                }}
+                type="button"
+              >
+                Create Free Account
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   )
 }

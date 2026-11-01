@@ -210,3 +210,88 @@ export function BadgeCheckIcon({ className }) {
     </Icon>
   )
 }
+
+export function TrophyIcon({ className }) {
+  return (
+    <Icon className={className}>
+      <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+      <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+      <path d="M4 22h16" />
+      <path d="M10 14.66V17c0 .55-.45 1-1 1H8c-.55 0-1 .45-1 1v1h10v-1c0-.55-.45-1-1-1h-1c-.55 0-1-.45-1-1v-2.34" />
+      <path d="M6 4h12v7a6 6 0 0 1-12 0V4z" />
+    </Icon>
+  )
+}
+
+export function GraduationCapIcon({ className }) {
+  return (
+    <Icon className={className}>
+      <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+      <path d="M6 12v5c3 3 9 3 12 0v-5" />
+    </Icon>
+  )
+}
+
+export function GlobeIcon({ className }) {
+  return (
+    <Icon className={className}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+      <path d="M2 12h20" />
+    </Icon>
+  )
+}
+
+export function CheckIcon({ className }) {
+  return (
+    <Icon className={className}>
+      <path d="M20 6 9 17l-5-5" />
+    </Icon>
+  )
+}
+
+export function AlertTriangleIcon({ className }) {
+  return (
+    <Icon className={className}>
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+      <path d="M12 9v4M12 17h.01" />
+    </Icon>
+  )
+}
+
+export function BotIcon({ className }) {
+  return (
+    <Icon className={className}>
+      <rect x="3" y="11" width="18" height="10" rx="2" />
+      <circle cx="12" cy="5" r="2" />
+      <path d="M12 7v4M8 16h.01M16 16h.01" />
+    </Icon>
+  )
+}
+
+export function MicIcon({ className }) {
+  return (
+    <Icon className={className}>
+      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3M8 22h8" />
+    </Icon>
+  )
+}
+
+export function SearchIcon({ className }) {
+  return (
+    <Icon className={className}>
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.3-4.3" />
+    </Icon>
+  )
+}
+
+export function ClockIcon({ className }) {
+  return (
+    <Icon className={className}>
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </Icon>
+  )
+}

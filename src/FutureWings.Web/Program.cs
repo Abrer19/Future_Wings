@@ -50,7 +50,12 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddSignalR();
 
 builder.Services.AddDbContext<FutureWingsDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        sqlOptions => sqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(30),
+            errorNumbersToAdd: null)));
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
@@ -161,6 +166,9 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapGet("/health", () => Results.Ok(new { status = "Healthy", timestamp = DateTimeOffset.UtcNow })).AllowAnonymous();
+app.MapGet("/api/health", () => Results.Ok(new { status = "Healthy", timestamp = DateTimeOffset.UtcNow })).AllowAnonymous();
+
 app.MapControllers();
 app.MapHub<NotificationHub>("/hubs/notifications");
 
@@ -178,15 +186,17 @@ using (var scope = app.Services.CreateScope())
     await ApplicationStateSeeder.SeedAsync(context);
     await DiscoverySeeder.SeedAsync(context);
 
-    // Gated Demo Mode: Strictly rejected in Production
-    var isDemoMode = !app.Environment.IsProduction() &&
-        (builder.Configuration.GetValue<bool>("DemoMode:Enabled") ||
-         string.Equals(Environment.GetEnvironmentVariable("FUTUREWINGS_DEMO_MODE"), "true", StringComparison.OrdinalIgnoreCase));
+    // Gated Demo Mode: Explicitly opt-in through secure configuration flag
+    var isDemoMode = builder.Configuration.GetValue<bool>("DemoMode:Enabled") ||
+        string.Equals(Environment.GetEnvironmentVariable("FUTUREWINGS_DEMO_MODE"), "true", StringComparison.OrdinalIgnoreCase);
 
     if (isDemoMode)
     {
-        var seedStaff = builder.Configuration.GetValue<bool>("DemoMode:SeedStaffAccounts") ||
-            string.Equals(Environment.GetEnvironmentVariable("FUTUREWINGS_SEED_STAFF"), "true", StringComparison.OrdinalIgnoreCase);
+        // Privileged staff accounts (Admin / Agent) remain strictly opt-in and off by default.
+        // In Production, staff accounts are strictly prohibited from seeding to preserve security.
+        var seedStaff = !app.Environment.IsProduction() && (
+            builder.Configuration.GetValue<bool>("DemoMode:SeedStaffAccounts") ||
+            string.Equals(Environment.GetEnvironmentVariable("FUTUREWINGS_SEED_STAFF"), "true", StringComparison.OrdinalIgnoreCase));
         await DemoUserSeeder.SeedAsync(context, seedStaff);
     }
 }

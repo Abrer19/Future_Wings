@@ -1,3 +1,5 @@
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 using FutureWings.Application.DTOs.Document;
 using FutureWings.Application.Interfaces;
 using FutureWings.Domain.Entities;
@@ -7,11 +9,40 @@ using Microsoft.Extensions.Configuration;
 
 namespace FutureWings.Infrastructure.Services;
 
-public sealed class DocumentService(
-    FutureWingsDbContext context,
-    IConfiguration? configuration = null) : IDocumentService
+public sealed class DocumentService : IDocumentService
 {
     private const int MaxFileBytes = 10 * 1024 * 1024;
+    private readonly FutureWingsDbContext _context;
+    private readonly IConfiguration? _configuration;
+    private readonly BlobContainerClient? _blobContainerClient;
+
+    public DocumentService(
+        FutureWingsDbContext context,
+        IConfiguration? configuration = null)
+    {
+        _context = context;
+        _configuration = configuration;
+
+        var blobConnStr = configuration?["AzureBlobStorage:ConnectionString"] ??
+                          configuration?["Storage:AzureBlobConnectionString"] ??
+                          configuration?["Storage:ConnectionString"] ??
+                          configuration?["AZURE_STORAGE_CONNECTION_STRING"];
+
+        if (!string.IsNullOrWhiteSpace(blobConnStr))
+        {
+            var containerName = configuration?["AzureBlobStorage:ContainerName"] ?? "documents";
+            var serviceClient = new BlobServiceClient(blobConnStr);
+            _blobContainerClient = serviceClient.GetBlobContainerClient(containerName);
+            try
+            {
+                _blobContainerClient.CreateIfNotExists(PublicAccessType.None);
+            }
+            catch
+            {
+                // In restricted permission environments, container may already exist
+            }
+        }
+    }
 
     private static readonly Dictionary<string, (string[] ContentTypes, byte[][] Signatures)> AllowedFormatSignatures =
         new(StringComparer.OrdinalIgnoreCase)
@@ -43,13 +74,13 @@ public sealed class DocumentService(
         };
 
     private string StorageRoot =>
-        configuration?["DocumentStorage:Path"] ??
-        configuration?["Storage:DocumentsPath"] ??
+        _configuration?["DocumentStorage:Path"] ??
+        _configuration?["Storage:DocumentsPath"] ??
         Path.Combine(Directory.GetCurrentDirectory(), "App_Data", "documents");
 
     public async Task<DocumentDto> UploadAsync(int userId, DocumentUploadDto request)
     {
-        if (!await context.Users.AnyAsync(user => user.Id == userId))
+        if (!await _context.Users.AnyAsync(user => user.Id == userId))
             throw new KeyNotFoundException("User not found.");
 
         if (request.Content.Length is 0 or > MaxFileBytes)
@@ -61,7 +92,6 @@ public sealed class DocumentService(
             request.FileName.Contains('/') ||
             request.FileName.Contains('\\'))
         {
-            // Extract the base file name safely
             request.FileName = Path.GetFileName(request.FileName);
         }
 
@@ -89,51 +119,85 @@ public sealed class DocumentService(
             throw new ArgumentException("File content signature does not match expected format.");
         }
 
-        var storageDir = StorageRoot;
-        Directory.CreateDirectory(storageDir);
-
         var storedName = $"{Guid.NewGuid():N}{extension}";
-        var fullPath = Path.Combine(storageDir, storedName);
 
-        // Verify that the resolved target path is strictly within the allowed directory
-        var canonicalTarget = Path.GetFullPath(fullPath);
-        var canonicalStorage = Path.GetFullPath(storageDir);
-        if (!canonicalTarget.StartsWith(canonicalStorage, StringComparison.OrdinalIgnoreCase))
+        if (_blobContainerClient != null)
         {
-            throw new ArgumentException("Invalid file destination path.");
-        }
+            // Azure Blob Storage durable persistence
+            var blobClient = _blobContainerClient.GetBlobClient(storedName);
+            using var uploadStream = new MemoryStream(request.Content, writable: false);
+            await blobClient.UploadAsync(uploadStream, new BlobHttpHeaders { ContentType = request.ContentType });
 
-        await File.WriteAllBytesAsync(fullPath, request.Content);
-
-        var document = new Document
-        {
-            UserId = userId,
-            FileName = safeName,
-            FilePath = storedName,
-            ContentType = request.ContentType,
-            SizeBytes = request.Content.LongLength,
-            UploadedAt = DateTimeOffset.UtcNow,
-        };
-
-        try
-        {
-            context.Documents.Add(document);
-            await context.SaveChangesAsync();
-        }
-        catch
-        {
-            if (File.Exists(fullPath))
+            var document = new Document
             {
-                try { File.Delete(fullPath); } catch { /* ignore on rollback */ }
-            }
-            throw;
-        }
+                UserId = userId,
+                FileName = safeName,
+                FilePath = storedName,
+                ContentType = request.ContentType,
+                SizeBytes = request.Content.LongLength,
+                UploadedAt = DateTimeOffset.UtcNow,
+            };
 
-        return ToDto(document);
+            try
+            {
+                _context.Documents.Add(document);
+                await _context.SaveChangesAsync();
+            }
+            catch
+            {
+                try { await blobClient.DeleteIfExistsAsync(); } catch { /* ignore on rollback */ }
+                throw;
+            }
+
+            return ToDto(document);
+        }
+        else
+        {
+            // Local filesystem storage fallback for development/testing
+            var storageDir = StorageRoot;
+            Directory.CreateDirectory(storageDir);
+
+            var fullPath = Path.Combine(storageDir, storedName);
+
+            var canonicalTarget = Path.GetFullPath(fullPath);
+            var canonicalStorage = Path.GetFullPath(storageDir);
+            if (!canonicalTarget.StartsWith(canonicalStorage, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException("Invalid file destination path.");
+            }
+
+            await File.WriteAllBytesAsync(fullPath, request.Content);
+
+            var document = new Document
+            {
+                UserId = userId,
+                FileName = safeName,
+                FilePath = storedName,
+                ContentType = request.ContentType,
+                SizeBytes = request.Content.LongLength,
+                UploadedAt = DateTimeOffset.UtcNow,
+            };
+
+            try
+            {
+                _context.Documents.Add(document);
+                await _context.SaveChangesAsync();
+            }
+            catch
+            {
+                if (File.Exists(fullPath))
+                {
+                    try { File.Delete(fullPath); } catch { /* ignore on rollback */ }
+                }
+                throw;
+            }
+
+            return ToDto(document);
+        }
     }
 
     public async Task<IReadOnlyList<DocumentDto>> GetAllAsync(int userId) =>
-        await context.Documents.AsNoTracking().Where(item => item.UserId == userId)
+        await _context.Documents.AsNoTracking().Where(item => item.UserId == userId)
             .OrderByDescending(item => item.UploadedAt).Select(item => new DocumentDto
             {
                 Id = item.Id,
@@ -146,31 +210,59 @@ public sealed class DocumentService(
     public async Task<DocumentDownloadDto> DownloadAsync(int userId, int documentId)
     {
         var document = await OwnedDocument(userId, documentId);
-        var fullPath = Path.Combine(StorageRoot, document.FilePath);
-        if (!File.Exists(fullPath)) throw new FileNotFoundException("The stored document file is missing.");
-        return new DocumentDownloadDto
+
+        if (_blobContainerClient != null)
         {
-            FileName = document.FileName,
-            ContentType = document.ContentType,
-            Content = await File.ReadAllBytesAsync(fullPath)
-        };
+            var blobClient = _blobContainerClient.GetBlobClient(document.FilePath);
+            if (!await blobClient.ExistsAsync())
+            {
+                throw new FileNotFoundException("The stored document file is missing.");
+            }
+
+            var downloadResult = await blobClient.DownloadContentAsync();
+            return new DocumentDownloadDto
+            {
+                FileName = document.FileName,
+                ContentType = document.ContentType,
+                Content = downloadResult.Value.Content.ToArray()
+            };
+        }
+        else
+        {
+            var fullPath = Path.Combine(StorageRoot, document.FilePath);
+            if (!File.Exists(fullPath)) throw new FileNotFoundException("The stored document file is missing.");
+            return new DocumentDownloadDto
+            {
+                FileName = document.FileName,
+                ContentType = document.ContentType,
+                Content = await File.ReadAllBytesAsync(fullPath)
+            };
+        }
     }
 
     public async Task DeleteAsync(int userId, int documentId)
     {
         var document = await OwnedDocument(userId, documentId);
-        var fullPath = Path.Combine(StorageRoot, document.FilePath);
-        context.Documents.Remove(document);
-        await context.SaveChangesAsync();
+        _context.Documents.Remove(document);
+        await _context.SaveChangesAsync();
 
-        if (File.Exists(fullPath))
+        if (_blobContainerClient != null)
         {
-            try { File.Delete(fullPath); } catch { /* ignore */ }
+            var blobClient = _blobContainerClient.GetBlobClient(document.FilePath);
+            try { await blobClient.DeleteIfExistsAsync(); } catch { /* ignore */ }
+        }
+        else
+        {
+            var fullPath = Path.Combine(StorageRoot, document.FilePath);
+            if (File.Exists(fullPath))
+            {
+                try { File.Delete(fullPath); } catch { /* ignore */ }
+            }
         }
     }
 
     private async Task<Document> OwnedDocument(int userId, int documentId) =>
-        await context.Documents.SingleOrDefaultAsync(item => item.Id == documentId && item.UserId == userId)
+        await _context.Documents.SingleOrDefaultAsync(item => item.Id == documentId && item.UserId == userId)
         ?? throw new KeyNotFoundException("Document not found.");
 
     private static DocumentDto ToDto(Document item) => new()
