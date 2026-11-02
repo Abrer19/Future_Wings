@@ -75,7 +75,35 @@ public class SubscriptionController(ISubscriptionService subscriptionService) : 
         }
         catch (InvalidOperationException exception)
         {
-            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = exception.Message });
+            return Problem(
+                detail: exception.Message,
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                title: "Simulated Checkout Unavailable");
+        }
+    }
+
+    /// <summary>
+    /// Demo-mode action to unlock Pro tier and Roadmap entitlements without taking real payment.
+    /// Strictly refused in Production with standard ProblemDetails.
+    /// Idempotent: repeated calls do not create duplicate payments or conflicting entitlements.
+    /// </summary>
+    [HttpPost("demo-pro")]
+    public async Task<IActionResult> UnlockProDemo()
+    {
+        try
+        {
+            return Ok(await subscriptionService.UnlockProDemoAsync(GetUserId()));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (InvalidOperationException exception)
+        {
+            return Problem(
+                detail: exception.Message,
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                title: "Demo Mode Unavailable");
         }
     }
 

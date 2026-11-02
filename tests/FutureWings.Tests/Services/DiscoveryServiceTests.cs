@@ -98,6 +98,58 @@ public class DiscoveryServiceTests
     }
 
     [Fact]
+    public async Task SearchAsync_FiltersByTrack_AndReturnsStudyTracks()
+    {
+        using var context = CreateSeededContext();
+        var service = new DiscoveryService(context);
+
+        var result = await service.SearchAsync(1, null, null, null, "AI");
+
+        Assert.Single(result.Programs);
+        Assert.Equal("MSc Computer Science", result.Programs[0].Name);
+        Assert.Contains("AI", result.StudyTracks);
+        Assert.Contains("STEM", result.StudyTracks);
+        Assert.Contains("Humanities", result.StudyTracks);
+    }
+
+    [Fact]
+    public async Task GetProgramByIdAsync_ReturnsCorrectProgramDetails()
+    {
+        using var context = CreateSeededContext();
+        var program = context.Programs.First(p => p.Id == 1);
+        program.Description = "World-class CS graduate program.";
+        program.Requirements = "GRE, TOEFL/IELTS, Bachelor in related field.";
+        program.OfficialLink = "https://cs.toronto.edu";
+        context.SaveChanges();
+
+        var service = new DiscoveryService(context);
+        await service.SaveProgramAsync(1, 1);
+
+        var details = await service.GetProgramByIdAsync(1, 1);
+
+        Assert.NotNull(details);
+        Assert.Equal(1, details.Id);
+        Assert.Equal("MSc Computer Science", details.Name);
+        Assert.Equal("University of Toronto", details.University);
+        Assert.Equal("Toronto", details.City);
+        Assert.Equal("Canada", details.Country);
+        Assert.True(details.IsSaved);
+        Assert.Equal("World-class CS graduate program.", details.Description);
+        Assert.Equal("GRE, TOEFL/IELTS, Bachelor in related field.", details.Requirements);
+        Assert.Equal("https://cs.toronto.edu", details.OfficialLink);
+    }
+
+    [Fact]
+    public async Task GetProgramByIdAsync_NonExistent_ReturnsNull()
+    {
+        using var context = CreateSeededContext();
+        var service = new DiscoveryService(context);
+
+        var details = await service.GetProgramByIdAsync(1, 9999);
+        Assert.Null(details);
+    }
+
+    [Fact]
     public async Task GetCountriesAsync_ReturnsAllCountries()
     {
         using var context = CreateSeededContext();

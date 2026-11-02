@@ -15,4 +15,6 @@ public class RecommendationResultDto
     public int DurationMonths { get; set; }
     public IReadOnlyList<string> Tags { get; set; } = [];
     public bool IsSaved { get; set; }
+    public bool IsTracked { get; set; }
+    public int? ApplicationId { get; set; }
 }

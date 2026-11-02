@@ -14,6 +14,8 @@ public sealed class FutureWingsDbContext(DbContextOptions<FutureWingsDbContext> 
     public DbSet<University> Universities => Set<University>();
     public DbSet<AcademicProgram> Programs => Set<AcademicProgram>();
     public DbSet<Scholarship> Scholarships => Set<Scholarship>();
+    public DbSet<ScholarshipInterest> ScholarshipInterests => Set<ScholarshipInterest>();
+    public DbSet<ScholarshipChecklistStep> ScholarshipChecklistSteps => Set<ScholarshipChecklistStep>();
     public DbSet<DomainApplication> Applications => Set<DomainApplication>();
     public DbSet<ApplicationState> ApplicationStates => Set<ApplicationState>();
     public DbSet<Document> Documents => Set<Document>();
@@ -67,6 +69,11 @@ public sealed class FutureWingsDbContext(DbContextOptions<FutureWingsDbContext> 
             entity.HasMany(user => user.Deadlines)
                 .WithOne(deadline => deadline.User)
                 .HasForeignKey(deadline => deadline.UserId);
+
+            entity.HasMany(user => user.ScholarshipInterests)
+                .WithOne(interest => interest.User)
+                .HasForeignKey(interest => interest.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<UserProfile>(entity =>
@@ -119,6 +126,9 @@ public sealed class FutureWingsDbContext(DbContextOptions<FutureWingsDbContext> 
             entity.Property(program => program.Level).HasMaxLength(50);
             entity.Property(program => program.AnnualTuitionUsd).HasPrecision(12, 2);
             entity.Property(program => program.Tags).HasMaxLength(500);
+            entity.Property(program => program.Description).HasMaxLength(2000);
+            entity.Property(program => program.Requirements).HasMaxLength(2000);
+            entity.Property(program => program.OfficialLink).HasMaxLength(500);
 
             entity.HasMany(program => program.Applications)
                 .WithOne(application => application.Program)
@@ -143,9 +153,44 @@ public sealed class FutureWingsDbContext(DbContextOptions<FutureWingsDbContext> 
         {
             entity.HasKey(scholarship => scholarship.Id);
             entity.Property(scholarship => scholarship.Name).HasMaxLength(200);
+            entity.Property(scholarship => scholarship.Description).HasMaxLength(2000);
             entity.Property(scholarship => scholarship.EligibilityCriteria).HasMaxLength(1000);
+            entity.Property(scholarship => scholarship.RequiredDocuments).HasMaxLength(1000);
+            entity.Property(scholarship => scholarship.StudyLevel).HasMaxLength(100);
+            entity.Property(scholarship => scholarship.FieldOfStudy).HasMaxLength(200);
+            entity.Property(scholarship => scholarship.OfficialLink).HasMaxLength(500);
             entity.Property(scholarship => scholarship.AwardAmount).HasPrecision(12, 2);
             entity.HasIndex(scholarship => new { scholarship.CountryId, scholarship.Name }).IsUnique();
+
+            entity.HasMany(scholarship => scholarship.Interests)
+                .WithOne(interest => interest.Scholarship)
+                .HasForeignKey(interest => interest.ScholarshipId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ScholarshipInterest>(entity =>
+        {
+            entity.HasKey(interest => interest.Id);
+            entity.HasIndex(interest => new { interest.UserId, interest.ScholarshipId }).IsUnique();
+
+            entity.HasOne(interest => interest.User)
+                .WithMany(user => user.ScholarshipInterests)
+                .HasForeignKey(interest => interest.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(interest => interest.Steps)
+                .WithOne(step => step.ScholarshipInterest)
+                .HasForeignKey(step => step.ScholarshipInterestId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ScholarshipChecklistStep>(entity =>
+        {
+            entity.HasKey(step => step.Id);
+            entity.Property(step => step.StepKey).HasMaxLength(100);
+            entity.Property(step => step.Title).HasMaxLength(200);
+            entity.Property(step => step.Description).HasMaxLength(1000);
+            entity.HasIndex(step => new { step.ScholarshipInterestId, step.StepOrder });
         });
 
         modelBuilder.Entity<DomainApplication>(entity =>
@@ -173,7 +218,19 @@ public sealed class FutureWingsDbContext(DbContextOptions<FutureWingsDbContext> 
         });
         modelBuilder.Entity<VisaOutcome>().HasKey(outcome => outcome.Id);
         modelBuilder.Entity<Rating>().HasKey(rating => rating.Id);
-        modelBuilder.Entity<Notification>().HasKey(notification => notification.Id);
+        modelBuilder.Entity<Notification>(entity =>
+        {
+            entity.HasKey(notification => notification.Id);
+            entity.Property(notification => notification.Title).HasMaxLength(200);
+            entity.Property(notification => notification.Message).HasMaxLength(2000);
+            entity.Property(notification => notification.Type).HasMaxLength(50);
+            entity.Property(notification => notification.TargetPage).HasMaxLength(100);
+            entity.Property(notification => notification.TargetId).HasMaxLength(100);
+            entity.Property(notification => notification.EventKey).HasMaxLength(150);
+            entity.HasIndex(notification => new { notification.UserId, notification.IsRead });
+            entity.HasIndex(notification => new { notification.UserId, notification.CreatedAt });
+            entity.HasIndex(notification => new { notification.UserId, notification.EventKey });
+        });
         modelBuilder.Entity<Payment>(entity =>
         {
             entity.HasKey(payment => payment.Id);

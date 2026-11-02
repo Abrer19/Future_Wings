@@ -14,9 +14,19 @@ public class DiscoveryController(IDiscoveryService discoveryService) : Controlle
     public async Task<IActionResult> Search(
         [FromQuery] string? query,
         [FromQuery] string? country,
-        [FromQuery] string? level)
+        [FromQuery] string? level,
+        [FromQuery] string? track)
     {
-        return Ok(await discoveryService.SearchAsync(GetUserId(), query, country, level));
+        return Ok(await discoveryService.SearchAsync(GetUserId(), query, country, level, track));
+    }
+
+    [HttpGet("programs/{id:int}")]
+    public async Task<IActionResult> GetProgram(int id)
+    {
+        var program = await discoveryService.GetProgramByIdAsync(GetUserId(), id);
+        return program is null
+            ? NotFound(new { message = $"Program with ID {id} was not found." })
+            : Ok(program);
     }
 
     [HttpGet("saved")]

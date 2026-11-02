@@ -33,7 +33,13 @@ public sealed class ProfileService(FutureWingsDbContext context) : IProfileServi
             })
             .SingleOrDefaultAsync();
 
-        return profile ?? throw new KeyNotFoundException("Profile not found.");
+        if (profile == null)
+        {
+            throw new KeyNotFoundException("Profile not found.");
+        }
+
+        PopulateAcademicCompletion(profile);
+        return profile;
     }
 
     public async Task<ProfileDto> UpdateProfileAsync(int userId, UpdateProfileDto request)
@@ -56,6 +62,44 @@ public sealed class ProfileService(FutureWingsDbContext context) : IProfileServi
 
         await context.SaveChangesAsync();
         return await GetProfileAsync(userId);
+    }
+
+    /// <summary>
+    /// Evaluates the four required academic core fields:
+    /// 1. CGPA: numeric and within [0, 4.0]
+    /// 2. Major: non-empty after trimming
+    /// 3. BudgetUsd: numeric and strictly greater than zero (> 0)
+    /// 4. DegreeLevel: non-empty after trimming
+    /// </summary>
+    public static void PopulateAcademicCompletion(ProfileDto dto)
+    {
+        var missing = new List<string>();
+
+        if (!dto.Cgpa.HasValue || dto.Cgpa.Value < 0m || dto.Cgpa.Value > 4.0m)
+        {
+            missing.Add("CGPA");
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.Major))
+        {
+            missing.Add("Target Major");
+        }
+
+        if (!dto.BudgetUsd.HasValue || dto.BudgetUsd.Value <= 0m)
+        {
+            missing.Add("Annual Budget");
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.DegreeLevel))
+        {
+            missing.Add("Target Degree Level");
+        }
+
+        dto.TotalRequiredCoreFieldsCount = 4;
+        dto.CompletedCoreFieldsCount = 4 - missing.Count;
+        dto.MissingCoreFields = missing;
+        dto.IsAcademicComplete = missing.Count == 0;
+        dto.CompletionPercentage = (int)Math.Round((double)dto.CompletedCoreFieldsCount / dto.TotalRequiredCoreFieldsCount * 100);
     }
 
     /// Blank input clears the field back to null ("not set") rather than storing "".

@@ -193,19 +193,52 @@ namespace FutureWings.Infrastructure.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("EventKey")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
                     b.Property<bool>("IsRead")
                         .HasColumnType("bit");
 
                     b.Property<string>("Message")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TargetId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("TargetPage")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<int>("UserId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.HasIndex("UserId", "EventKey");
+
+                    b.HasIndex("UserId", "IsRead");
 
                     b.ToTable("Notifications");
                 });
@@ -249,6 +282,35 @@ namespace FutureWings.Infrastructure.Data.Migrations
                     b.ToTable("Payments");
                 });
 
+            modelBuilder.Entity("FutureWings.Domain.Entities.ProcessedWebhookEvent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTimeOffset>("ProcessedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("StripeEventId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StripeEventId")
+                        .IsUnique();
+
+                    b.ToTable("ProcessedWebhookEvents");
+                });
+
             modelBuilder.Entity("FutureWings.Domain.Entities.Program", b =>
                 {
                     b.Property<int>("Id")
@@ -260,6 +322,10 @@ namespace FutureWings.Infrastructure.Data.Migrations
                     b.Property<decimal>("AnnualTuitionUsd")
                         .HasPrecision(12, 2)
                         .HasColumnType("decimal(12,2)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
                     b.Property<int>("DurationMonths")
                         .HasColumnType("int");
@@ -276,6 +342,14 @@ namespace FutureWings.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("OfficialLink")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Requirements")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
                     b.Property<string>("Tags")
                         .IsRequired()
@@ -357,15 +431,35 @@ namespace FutureWings.Infrastructure.Data.Migrations
                     b.Property<DateTimeOffset?>("Deadline")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
                     b.Property<string>("EligibilityCriteria")
                         .IsRequired()
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
+                    b.Property<string>("FieldOfStudy")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("OfficialLink")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("RequiredDocuments")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("StudyLevel")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.HasKey("Id");
 
@@ -373,6 +467,74 @@ namespace FutureWings.Infrastructure.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("Scholarships");
+                });
+
+            modelBuilder.Entity("FutureWings.Domain.Entities.ScholarshipChecklistStep", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("ScholarshipInterestId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("StepKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("StepOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ScholarshipInterestId", "StepOrder");
+
+                    b.ToTable("ScholarshipChecklistSteps");
+                });
+
+            modelBuilder.Entity("FutureWings.Domain.Entities.ScholarshipInterest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("ScholarshipId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ScholarshipId");
+
+                    b.HasIndex("UserId", "ScholarshipId")
+                        .IsUnique();
+
+                    b.ToTable("ScholarshipInterests");
                 });
 
             modelBuilder.Entity("FutureWings.Domain.Entities.University", b =>
@@ -659,6 +821,36 @@ namespace FutureWings.Infrastructure.Data.Migrations
                     b.Navigation("Country");
                 });
 
+            modelBuilder.Entity("FutureWings.Domain.Entities.ScholarshipChecklistStep", b =>
+                {
+                    b.HasOne("FutureWings.Domain.Entities.ScholarshipInterest", "ScholarshipInterest")
+                        .WithMany("Steps")
+                        .HasForeignKey("ScholarshipInterestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ScholarshipInterest");
+                });
+
+            modelBuilder.Entity("FutureWings.Domain.Entities.ScholarshipInterest", b =>
+                {
+                    b.HasOne("FutureWings.Domain.Entities.Scholarship", "Scholarship")
+                        .WithMany("Interests")
+                        .HasForeignKey("ScholarshipId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FutureWings.Domain.Entities.User", "User")
+                        .WithMany("ScholarshipInterests")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Scholarship");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("FutureWings.Domain.Entities.University", b =>
                 {
                     b.HasOne("FutureWings.Domain.Entities.Country", "Country")
@@ -716,6 +908,16 @@ namespace FutureWings.Infrastructure.Data.Migrations
                     b.Navigation("SavedByUsers");
                 });
 
+            modelBuilder.Entity("FutureWings.Domain.Entities.Scholarship", b =>
+                {
+                    b.Navigation("Interests");
+                });
+
+            modelBuilder.Entity("FutureWings.Domain.Entities.ScholarshipInterest", b =>
+                {
+                    b.Navigation("Steps");
+                });
+
             modelBuilder.Entity("FutureWings.Domain.Entities.University", b =>
                 {
                     b.Navigation("Programs");
@@ -740,6 +942,8 @@ namespace FutureWings.Infrastructure.Data.Migrations
                     b.Navigation("Ratings");
 
                     b.Navigation("SavedPrograms");
+
+                    b.Navigation("ScholarshipInterests");
                 });
 #pragma warning restore 612, 618
         }

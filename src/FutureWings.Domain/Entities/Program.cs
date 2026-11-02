@@ -10,6 +10,9 @@ public class Program
     public int DurationMonths { get; set; }
     public int MatchScore { get; set; }
     public string Tags { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string? Requirements { get; set; }
+    public string? OfficialLink { get; set; }
 
     public University University { get; set; } = null!;
     public ICollection<Application> Applications { get; set; } = [];

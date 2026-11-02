@@ -12,4 +12,11 @@ public class ProfileDto
     public string? Major { get; set; }
     public decimal? BudgetUsd { get; set; }
     public string? DegreeLevel { get; set; }
+
+    // Server-calculated profile completion properties
+    public bool IsAcademicComplete { get; set; }
+    public int CompletedCoreFieldsCount { get; set; }
+    public int TotalRequiredCoreFieldsCount { get; set; } = 4;
+    public IReadOnlyList<string> MissingCoreFields { get; set; } = [];
+    public int CompletionPercentage { get; set; }
 }

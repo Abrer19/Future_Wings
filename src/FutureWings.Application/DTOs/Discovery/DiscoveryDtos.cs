@@ -24,6 +24,11 @@ public sealed class DiscoveryProgramDto
     public int MatchScore { get; init; }
     public IReadOnlyList<string> Tags { get; init; } = [];
     public bool IsSaved { get; init; }
+    public string? Description { get; init; }
+    public string? Requirements { get; init; }
+    public string? OfficialLink { get; init; }
+    public bool IsTracked { get; init; }
+    public int? ApplicationId { get; init; }
 }
 
 public sealed class DiscoveryResultDto
@@ -32,5 +37,6 @@ public sealed class DiscoveryResultDto
     public IReadOnlyList<DiscoveryProgramDto> Programs { get; init; } = [];
     public IReadOnlyList<string> Countries { get; init; } = [];
     public IReadOnlyList<string> Levels { get; init; } = [];
+    public IReadOnlyList<string> StudyTracks { get; init; } = [];
     public int TotalCount { get; init; }
 }

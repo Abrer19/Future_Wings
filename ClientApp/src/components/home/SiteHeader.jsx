@@ -1,20 +1,43 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowRightIcon, CloseIcon, LogoMark, MenuIcon } from './icons.jsx'
+import { setReturnTo } from '../../lib/navigationStorage.js'
 
 const navLinks = [
   { label: 'Product', href: '#product' },
   { label: 'How It Works', href: '#how-it-works' },
   { label: 'Destinations', href: '#destinations' },
-  { label: 'Scholarships', href: '#scholarships' },
-  { label: 'Community', href: '#community' },
+  { label: 'Scholarships', page: 'Scholarships' },
+  { label: 'Community', page: 'Community' },
   { label: 'FAQ', href: '#faq' },
 ]
 
-export default function SiteHeader({ onSignIn, onSignUp }) {
+export default function SiteHeader({
+  onSignIn,
+  onSignUp,
+  onNavigate,
+  isAuthenticated = false,
+  session = null,
+}) {
   const [open, setOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const toggleRef = useRef(null)
   const panelRef = useRef(null)
+
+  const authenticated = Boolean(isAuthenticated || session?.token || session?.userId)
+
+  const handleProtectedNav = (destination) => {
+    if (open) setOpen(false)
+    if (authenticated) {
+      onNavigate?.(destination)
+    } else {
+      setReturnTo(destination)
+      if (onNavigate) {
+        onNavigate('Login')
+      } else if (onSignIn) {
+        onSignIn()
+      }
+    }
+  }
 
   useEffect(() => {
     const handleScroll = () => {
@@ -74,12 +97,22 @@ export default function SiteHeader({ onSignIn, onSignUp }) {
           <ul className="flex items-center gap-1 rounded-full border border-secondary-200/70 bg-white/80 p-1 shadow-xs backdrop-blur-sm">
             {navLinks.map((link) => (
               <li key={link.label}>
-                <a
-                  className="rounded-full px-4 py-1.5 text-xs font-semibold text-secondary-600 transition hover:bg-secondary-100 hover:text-secondary-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-                  href={link.href}
-                >
-                  {link.label}
-                </a>
+                {link.page ? (
+                  <button
+                    className="rounded-full px-4 py-1.5 text-xs font-semibold text-secondary-600 transition hover:bg-secondary-100 hover:text-secondary-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 cursor-pointer"
+                    onClick={() => handleProtectedNav(link.page)}
+                    type="button"
+                  >
+                    {link.label}
+                  </button>
+                ) : (
+                  <a
+                    className="rounded-full px-4 py-1.5 text-xs font-semibold text-secondary-600 transition hover:bg-secondary-100 hover:text-secondary-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                    href={link.href}
+                  >
+                    {link.label}
+                  </a>
+                )}
               </li>
             ))}
           </ul>
@@ -136,13 +169,23 @@ export default function SiteHeader({ onSignIn, onSignUp }) {
               <ul className="space-y-1">
                 {navLinks.map((link) => (
                   <li key={link.label}>
-                    <a
-                      className="block rounded-xl px-4 py-2.5 text-sm font-bold text-secondary-800 transition hover:bg-secondary-50 hover:text-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-                      href={link.href}
-                      onClick={() => setOpen(false)}
-                    >
-                      {link.label}
-                    </a>
+                    {link.page ? (
+                      <button
+                        className="w-full text-left block rounded-xl px-4 py-2.5 text-sm font-bold text-secondary-800 transition hover:bg-secondary-50 hover:text-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 cursor-pointer"
+                        onClick={() => handleProtectedNav(link.page)}
+                        type="button"
+                      >
+                        {link.label}
+                      </button>
+                    ) : (
+                      <a
+                        className="block rounded-xl px-4 py-2.5 text-sm font-bold text-secondary-800 transition hover:bg-secondary-50 hover:text-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                        href={link.href}
+                        onClick={() => setOpen(false)}
+                      >
+                        {link.label}
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>

@@ -105,9 +105,9 @@ public static class DiscoverySeeder
                 "ETH Zurich", "Zurich", "Master in Computer Science", "Master's", 1800m, 24, 98, "World Top 10,Google & Disney Research Labs,Ultra Low Tuition"),
             new Seed("CH", "Switzerland", "World top-10 universities with very low tuition and highest graduate salaries", true,
                 "ETH Zurich", "Zurich", "Master in Data Science", "Master's", 1800m, 24, 97, "Max Planck Institute Partner,Swiss Banking Tech,Top ROI"),
-            new Seed("CH", "Switzerland", "World top-10 universities with very low tuition and highest graduate salaries", true,
+            new Seed("EPFL", "Switzerland", "World top-10 universities with very low tuition and highest graduate salaries", true,
                 "EPFL", "Lausanne", "MSc in Computer Science", "Master's", 1600m, 24, 96, "Lake Geneva Innovation Hub,Cybersecurity,Low Tuition"),
-            new Seed("CH", "Switzerland", "World top-10 universities with very low tuition and highest graduate salaries", true,
+            new Seed("EPFL", "Switzerland", "World top-10 universities with very low tuition and highest graduate salaries", true,
                 "EPFL", "Lausanne", "MSc in Robotics", "Master's", 1600m, 24, 95, "World Renowned Robotics,Swiss Tech,High Salaries"),
 
             // === SINGAPORE ===
@@ -212,59 +212,178 @@ public static class DiscoverySeeder
     {
         var scholarshipSeeds = new[]
         {
-            ("US", "Fulbright Foreign Student Program"),
-            ("US", "Knight-Hennessy Scholars at Stanford"),
-            ("US", "Hubert H. Humphrey Fellowship"),
-            ("CA", "Vanier Canada Graduate Scholarships"),
-            ("CA", "Lester B. Pearson International Scholarship"),
-            ("CA", "Ontario Graduate Scholarship (OGS)"),
-            ("GB", "Chevening Scholarships for Global Leaders"),
-            ("GB", "Commonwealth Masters Scholarships"),
-            ("GB", "Rhodes Scholarships at Oxford"),
-            ("DE", "DAAD Master Studies Scholarships"),
-            ("DE", "Deutschlandstipendium National Merit Grant"),
-            ("DE", "Heinrich Böll Foundation Research Grant"),
-            ("AU", "Australia Awards Scholarships"),
-            ("AU", "Melbourne International Research Scholarship"),
-            ("AU", "Destination Australia Regional Scholarship"),
-            ("NL", "NL Scholarship (Holland Scholarship)"),
-            ("NL", "Amsterdam Merit Scholarship (AMS)"),
-            ("NL", "Erasmus+ European Masters Grant"),
-            ("SE", "Swedish Institute Scholarships for Global Professionals"),
-            ("CH", "Swiss Government Excellence Scholarships"),
-            ("CH", "ETH Zurich Excellence Scholarship (ESOP)"),
-            ("SG", "Singapore International Graduate Award (SINGA)"),
-            ("JP", "MEXT Japanese Government Research Scholarship"),
-            ("FR", "Eiffel Excellence Scholarship Program"),
-            ("IE", "Government of Ireland International Education Scholarship"),
-            ("FI", "Finland Scholarship for Master's Degrees")
+            new ScholarshipSeed("US", "Fulbright Foreign Student Program",
+                "Enables graduate students, young professionals, and artists from abroad to study and conduct research in the United States.",
+                "Bachelor's degree or equivalent, strong academic record, English proficiency, and demonstrated leadership.",
+                "Academic transcripts, 3 letters of recommendation, TOEFL/IELTS report, personal statement, study objectives.",
+                "Master's, Doctorate", "All fields", "https://foreign.fulbrightonline.org/", 35000m, 10),
+            new ScholarshipSeed("US", "Knight-Hennessy Scholars at Stanford",
+                "A multidisciplinary, multicultural graduate fellowship program providing full funding for graduate study at Stanford University.",
+                "Applying to or enrolled in a full-time Stanford graduate program, bachelor's degree earned within last 7 years.",
+                "Online application, resume, transcripts, 2 recommendation letters, video statement, essay responses.",
+                "Master's, Doctorate, MBA, JD, MD", "All Stanford graduate fields", "https://knight-hennessy.stanford.edu/", 55000m, 10),
+            new ScholarshipSeed("US", "Hubert H. Humphrey Fellowship",
+                "Brings accomplished mid-career professionals from designated countries to the United States for an academic year of non-degree study and professional development.",
+                "Undergraduate degree, 5+ years of full-time professional experience, demonstrated public service leadership.",
+                "Resume/CV, project essay, professional references, English language assessment.",
+                "Fellowship / Non-degree", "Public Policy, Leadership, Education, Climate", "https://www.humphreyfellowship.org/", 30000m, 9),
+            new ScholarshipSeed("CA", "Vanier Canada Graduate Scholarships",
+                "Attracts and retains world-class doctoral students to Canadian institutions with prestigious, highly competitive funding.",
+                "Nominated by an eligible Canadian institution, first-class academic average, exceptional research potential and leadership.",
+                "Doctoral research proposal, project references, leadership reference letters, official transcripts.",
+                "Doctorate (PhD)", "Health, Natural Sciences, Engineering, Social Sciences", "https://vanier.gc.ca/", 50000m, 11),
+            new ScholarshipSeed("CA", "Lester B. Pearson International Scholarship",
+                "Recognizes exceptional international undergraduate students who demonstrate outstanding academic achievement and creativity at University of Toronto.",
+                "International secondary school graduate nominated by school counselor, strong community leadership.",
+                "School nomination letter, student application essay, academic transcripts, English proficiency.",
+                "Bachelor's", "All undergraduate programs at U of T", "https://future.utoronto.ca/pearson/", 40000m, 1),
+            new ScholarshipSeed("CA", "Ontario Graduate Scholarship (OGS)",
+                "Merit-based funding for outstanding graduate students pursuing master's or doctoral studies in Ontario universities.",
+                "Enrolled in an eligible Ontario graduate program, minimum A- average (80%) in past two years.",
+                "Transcripts, two academic references, research statement / study plan.",
+                "Master's, Doctorate", "All disciplines", "https://osap.gov.on.ca/", 15000m, 3),
+            new ScholarshipSeed("GB", "Chevening Scholarships for Global Leaders",
+                "UK government's prestigious global scholarship programme for outstanding emerging leaders to undertake a one-year master's in the UK.",
+                "Citizen of a Chevening-eligible country, minimum 2 years work experience, undergraduate degree with 2:1 honours or equivalent.",
+                "Degree transcripts, English proficiency, 2 references, 4 Chevening essays, unconditional UK offer.",
+                "Master's", "All eligible 1-year Master's programs", "https://www.chevening.org/", 38000m, 11),
+            new ScholarshipSeed("GB", "Commonwealth Masters Scholarships",
+                "Supports candidates from Commonwealth countries who could not otherwise afford to study in the UK.",
+                "Citizen or refugee status in an eligible Commonwealth country, minimum upper second class (2:1) undergraduate degree.",
+                "Official transcripts, 2 reference letters, development impact statement, university admission offer.",
+                "Master's", "Development-focused fields", "https://cscuk.fcdo.gov.uk/", 32000m, 12),
+            new ScholarshipSeed("GB", "Rhodes Scholarships at Oxford",
+                "The oldest and perhaps most prestigious international scholarship programme, enabling outstanding young people to study at the University of Oxford.",
+                "Exceptional academic achievement, moral character, commitment to service, and leadership instincts.",
+                "Oxford application, 4-8 reference letters, academic transcripts, CV, personal statement.",
+                "Master's, Doctorate", "All Oxford postgraduate courses", "https://www.rhodeshouse.ox.ac.uk/", 45000m, 10),
+            new ScholarshipSeed("DE", "DAAD Master Studies Scholarships",
+                "Offers graduates from all fields the opportunity to pursue a postgraduate or Master's degree at a state-recognized German university.",
+                "Completed Bachelor's degree within the last 6 years with above-average grades, English or German proficiency.",
+                "Tabular CV, letter of motivation (1-3 pages), degree certificate, transcripts, language certificate.",
+                "Master's", "All academic disciplines", "https://www.daad.de/en/", 22000m, 11),
+            new ScholarshipSeed("DE", "Deutschlandstipendium National Merit Grant",
+                "National merit scholarship awarded by German universities and matching private sponsors to high-achieving students.",
+                "Enrolled or admitted to a participating German university, top academic performance, social engagement.",
+                "University enrollment proof, CV, high school / university transcripts, motivation letter.",
+                "Bachelor's, Master's", "All disciplines", "https://www.deutschlandstipendium.de/", 3600m, 7),
+            new ScholarshipSeed("DE", "Heinrich Böll Foundation Research Grant",
+                "Awards scholarships to international graduates and PhD students who share the foundation's green socio-political values.",
+                "Excellent academic record, active socio-political engagement, German language proficiency (B2/DSH).",
+                "Detailed CV, motivation letter, social engagement reference, academic reference, certified transcripts.",
+                "Master's, Doctorate", "Social sciences, ecology, sustainability, humanities", "https://www.boell.de/en/", 16000m, 9),
+            new ScholarshipSeed("AU", "Australia Awards Scholarships",
+                "Long-term development awards administered by DFAT for emerging leaders from developing countries.",
+                "Citizen of participating country, minimum 18 years old, relevant work experience, IELTS 6.5+.",
+                "Academic qualifications, employer endorsement, development impact plan, English test scores.",
+                "Master's, Doctorate", "Priority development sectors", "https://www.dfat.gov.au/people-to-people/australia-awards", 35000m, 4),
+            new ScholarshipSeed("AU", "Melbourne International Research Scholarship",
+                "Awarded to high-achieving international research students undertaking graduate research degrees at University of Melbourne.",
+                "Completed tertiary degree equivalent to Australian 4-year honours with H1 average, research publication record.",
+                "Research proposal, academic transcripts, 2 referee reports, supervisor endorsement.",
+                "Doctorate (PhD), Master's by Research", "All research disciplines", "https://scholarships.unimelb.edu.au/", 37000m, 10),
+            new ScholarshipSeed("AU", "Destination Australia Regional Scholarship",
+                "Australian Government initiative funding tertiary students to study in regional and remote Australia.",
+                "Commencing full-time study at a regional campus, maintaining primary residence in a regional area.",
+                "Course acceptance letter, academic transcripts, statement of regional community commitment.",
+                "Bachelor's to Doctorate", "All regional campus programs", "https://www.education.gov.au/destination-australia", 15000m, 1),
+            new ScholarshipSeed("NL", "NL Scholarship (Holland Scholarship)",
+                "Financed by the Dutch Ministry of Education for international students from outside the EEA wishing to study in the Netherlands.",
+                "Non-EEA nationality, applying for a full-time bachelor's or master's at a participating Dutch research university.",
+                "University admission letter, motivation letter, CV, academic transcript, English proficiency (IELTS/TOEFL).",
+                "Bachelor's, Master's", "All programs at participating universities", "https://www.studyinnl.org/", 10000m, 5),
+            new ScholarshipSeed("NL", "Amsterdam Merit Scholarship (AMS)",
+                "Awarded by University of Amsterdam to outstanding international students from outside the EU/EEA.",
+                "Belong to top 10% of graduating class, admitted to a Master's degree program at UvA.",
+                "GPA evidence, CV, letter of motivation, 2 reference letters, English language test results.",
+                "Master's", "Economics, Science, Humanities, Law", "https://www.uva.nl/scholarships", 25000m, 1),
+            new ScholarshipSeed("NL", "Erasmus+ European Masters Grant",
+                "EU-funded master's scholarships covering participation costs, travel allowance, and living stipend for international students.",
+                "Undergraduate degree, high academic achievement, proficiency in languages of instruction.",
+                "Certified degree certificate, transcripts, motivation letter, CV, 2 recommendation letters.",
+                "Master's", "Erasmus Mundus Joint Master Degrees", "https://erasmus-plus.ec.europa.eu/", 28000m, 2),
+            new ScholarshipSeed("SE", "Swedish Institute Scholarships for Global Professionals",
+                "Fully-funded scholarship for global professionals to develop leadership and contribute to the UN 2030 Agenda in Sweden.",
+                "Citizen of eligible SI country, minimum 3,000 hours demonstrated work experience, leadership track record.",
+                "SI CV template, 2 letters of reference (one from employer), proof of work experience, motivation statement.",
+                "Master's", "Eligible SI Master's programmes", "https://si.se/en/apply/scholarships/swedish-institute-scholarships-for-global-professionals/", 30000m, 2),
+            new ScholarshipSeed("CH", "Swiss Government Excellence Scholarships",
+                "Promotes international exchange and research cooperation between Switzerland and over 180 other countries.",
+                "Master's degree or equivalent, exceptional academic research profile, Swiss professor mentor confirmation.",
+                "Research proposal, CV, letter from Swiss academic host, 2 letters of recommendation, medical certificate.",
+                "Doctorate (PhD), Postdoctoral", "All academic fields", "https://www.sbfi.admin.ch/scholarships_eng", 32000m, 11),
+            new ScholarshipSeed("CH", "ETH Zurich Excellence Scholarship (ESOP)",
+                "Supports outstanding students with a full scholarship covering tuition and living expenses for their Master's studies at ETH.",
+                "Graduated with very good result (top 10% of bachelor's program), admission to an ETH Master's program.",
+                "Pre-proposal for Master's thesis, 2 reference letters from professors, CV, certified transcripts.",
+                "Master's", "All ETH Zurich Master's programs", "https://ethz.ch/students/en/studies/financial/scholarships/excellence-scholarship.html", 34000m, 12),
+            new ScholarshipSeed("SG", "Singapore International Graduate Award (SINGA)",
+                "A collaboration between A*STAR, NTU, NUS, and SUTD to attract talented international PhD researchers to Singapore.",
+                "All international graduates with passion for research and excellent academic results, strong English proficiency.",
+                "Valid passport, transcripts, bachelor's & master's degree certificates, 2 academic recommendation reports.",
+                "Doctorate (PhD)", "Biomedical Sciences, Physical Sciences, Engineering", "https://www.a-star.edu.sg/Scholarships/for-graduate-studies/singapore-international-graduate-award-singa", 42000m, 12),
+            new ScholarshipSeed("JP", "MEXT Japanese Government Research Scholarship",
+                "Prestigious Japanese government scholarship covering full tuition, monthly stipend, and round-trip airfare.",
+                "Under 35 years of age, college graduate with 16+ years schooling, willingness to learn Japanese.",
+                "Field of study and research plan, academic transcripts, recommendation from university president/dean, medical certificate.",
+                "Master's, Doctorate", "All fields related to applicant's major", "https://www.studyinjapan.go.jp/en/planning/scholarship/mext-scholarships/", 24000m, 5),
+            new ScholarshipSeed("FR", "Eiffel Excellence Scholarship Program",
+                "French Ministry for Europe and Foreign Affairs program to attract top international master's and PhD students.",
+                "Non-French nationality, up to 25 years old for Master's or 30 for PhD, nominated by French higher education institution.",
+                "Institution nomination file, academic transcripts, resume, language proficiency, professional project statement.",
+                "Master's, Doctorate", "Engineering, Sciences, Economics, Management, Law", "https://www.campusfrance.org/en/eiffel-scholarship-program-of-excellence", 26000m, 1),
+            new ScholarshipSeed("IE", "Government of Ireland International Education Scholarship",
+                "Prestigious national scholarship awarded to high-calibre non-EU/EEA students studying in Ireland.",
+                "Domiciled outside EU/EEA, possess an offer of a place on an eligible Irish higher education programme.",
+                "Two references, personal statement, academic transcripts, Irish institution offer letter.",
+                "Master's, Doctorate", "All disciplines", "https://hea.ie/funding-governance-performance/funding/student-finance/government-of-ireland-international-education-scholarships/", 20000m, 3),
+            new ScholarshipSeed("FI", "Finland Scholarship for Master's Degrees",
+                "Funded by the Finnish Ministry of Education and Culture for gifted non-EU/EEA students admitted to Finnish universities.",
+                "Non-EU/EEA citizen liable for tuition fees, admitted to an eligible international Master's programme.",
+                "Online university application, certified degree certificates, transcript of records, English proficiency test (IELTS/TOEFL).",
+                "Master's", "All participating Finnish university Master's programmes", "https://www.studyinfinland.fi/scholarships/finland-scholarships", 18000m, 1)
         };
 
         for (var index = 0; index < scholarshipSeeds.Length; index++)
         {
-            var (countryCode, name) = scholarshipSeeds[index];
-            var country = await context.Countries.SingleOrDefaultAsync(c => c.Code == countryCode);
+            var seed = scholarshipSeeds[index];
+            var country = await context.Countries.SingleOrDefaultAsync(c => c.Code == seed.CountryCode);
             if (country is null) continue;
 
-            var existing = await context.Scholarships.SingleOrDefaultAsync(s => s.Name == name && s.CountryId == country.Id);
+            var existing = await context.Scholarships.SingleOrDefaultAsync(s => s.Name == seed.Name && s.CountryId == country.Id);
             if (existing is null)
             {
                 existing = new Scholarship
                 {
-                    Name = name,
+                    Name = seed.Name,
                     CountryId = country.Id
                 };
                 context.Scholarships.Add(existing);
             }
-            existing.EligibilityCriteria = "International applicants with strong academic achievement, leadership potential, and admission to an eligible program.";
-            existing.AwardAmount = 10_000m + index % 6 * 5_000m;
-            existing.Deadline = new DateTimeOffset(2027, 1 + index % 11, 15, 23, 59, 0, TimeSpan.Zero);
+            existing.Description = seed.Description;
+            existing.EligibilityCriteria = seed.EligibilityCriteria;
+            existing.RequiredDocuments = seed.RequiredDocuments;
+            existing.StudyLevel = seed.StudyLevel;
+            existing.FieldOfStudy = seed.FieldOfStudy;
+            existing.OfficialLink = seed.OfficialLink;
+            existing.AwardAmount = seed.AwardAmount;
+            existing.Deadline = new DateTimeOffset(2027, seed.DeadlineMonth, 15, 23, 59, 0, TimeSpan.Zero);
         }
         await context.SaveChangesAsync();
     }
 
     private static async Task SeedCommunityRatingsAsync(FutureWingsDbContext context)
     {
+        // Clean up any temporary or adversarial test payload reviews left from prior security tests
+        var dirtyRatings = await context.Ratings
+            .Where(r => r.Comment != null && (r.Comment.Contains("<script") || r.Comment.Contains("<img") || r.Comment.Contains("<iframe")))
+            .ToListAsync();
+        if (dirtyRatings.Count > 0)
+        {
+            context.Ratings.RemoveRange(dirtyRatings);
+            await context.SaveChangesAsync();
+        }
+
         // Check if demo user exists for ratings
         var demoUser = await context.Users.FirstOrDefaultAsync(u => u.Email == "demo.reviewer@futurewings.io");
         if (demoUser is null)
@@ -340,5 +459,16 @@ public static class DiscoverySeeder
         int DurationMonths,
         int MatchScore,
         string Tags);
-}
 
+    private sealed record ScholarshipSeed(
+        string CountryCode,
+        string Name,
+        string Description,
+        string EligibilityCriteria,
+        string RequiredDocuments,
+        string StudyLevel,
+        string FieldOfStudy,
+        string OfficialLink,
+        decimal AwardAmount,
+        int DeadlineMonth);
+}

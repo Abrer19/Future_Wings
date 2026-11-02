@@ -75,4 +75,32 @@ public class RecommendationServiceTests
         Assert.True(recommendations[0].MatchScore > recommendations[1].MatchScore);
         Assert.NotEmpty(recommendations[0].Reason);
     }
+
+    [Fact]
+    public async Task GetRecommendationsAsync_PopulatesIsTrackedAndApplicationId()
+    {
+        using var context = CreateSeededContext();
+        var draftState = new ApplicationState { Id = 1, Name = "Draft" };
+        context.ApplicationStates.Add(draftState);
+        context.Applications.Add(new Domain.Entities.Application
+        {
+            Id = 42,
+            UserId = 1,
+            ProgramId = 1,
+            ApplicationStateId = 1,
+            SubmittedAt = DateTimeOffset.UtcNow
+        });
+        context.SaveChanges();
+
+        var service = new RecommendationService(context);
+        var recommendations = await service.GetRecommendationsAsync(1);
+
+        var p1Rec = recommendations.Single(r => r.ProgramId == 1);
+        Assert.True(p1Rec.IsTracked);
+        Assert.Equal(42, p1Rec.ApplicationId);
+
+        var p2Rec = recommendations.Single(r => r.ProgramId == 2);
+        Assert.False(p2Rec.IsTracked);
+        Assert.Null(p2Rec.ApplicationId);
+    }
 }

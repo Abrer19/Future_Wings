@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { apiRequest, clearSession, loadSession, saveSession } from './auth.js'
 import LockedFeature from './components/ui/LockedFeature.jsx'
 import NavIcon from './components/ui/navIcons.jsx'
+import Toast from './components/ui/Toast.jsx'
 import Admin from './pages/Admin.jsx'
 import AgentPanel from './pages/AgentPanel.jsx'
 import AiInterview from './pages/AiInterview.jsx'
@@ -20,7 +21,16 @@ import Scholarships from './pages/Scholarships.jsx'
 import Subscription from './pages/Subscription.jsx'
 import VisaCheck from './pages/VisaCheck.jsx'
 import OnboardingTour from './components/onboarding/OnboardingTour.jsx'
+import ProfileCompletionPrompt from './components/profile/ProfileCompletionPrompt.jsx'
+import ProfileIncompleteBanner from './components/profile/ProfileIncompleteBanner.jsx'
+import NotificationBell from './components/notifications/NotificationBell.jsx'
 import { isTourEligible, resetTourRecord } from './lib/onboardingStorage.js'
+import {
+  evaluateProfileCompletion,
+  isProfilePromptDismissed,
+  dismissProfilePrompt,
+} from './lib/profileCompletion.js'
+import { clearReturnTo, getReturnTo } from './lib/navigationStorage.js'
 import { SparkleIcon } from './components/home/icons.jsx'
 
 const studentPages = {
@@ -121,19 +131,60 @@ function App() {
   })
   const [menuOpen, setMenuOpen] = useState(false)
   const [subscription, setSubscription] = useState(null)
+  const [profile, setProfile] = useState(null)
+  const [profileLoading, setProfileLoading] = useState(false)
+  const [promptDismissed, setPromptDismissed] = useState(false)
   const [tourOpen, setTourOpen] = useState(false)
+  const [returnTo, setReturnToState] = useState(getReturnTo)
+  const [appToast, setAppToast] = useState('')
   const menuButtonRef = useRef(null)
 
-  // Automatic onboarding tour for first-time login
+  const isStudent = session && session.role !== 'Admin' && session.role !== 'Agent'
+
+  // Server-side profile completion source of truth
+  const loadProfile = useCallback(async () => {
+    if (!session?.token || session?.role === 'Admin' || session?.role === 'Agent') {
+      setProfile(null)
+      return
+    }
+    setProfileLoading(true)
+    try {
+      const data = await apiRequest('/profile', { token: session.token })
+      setProfile(data)
+    } catch {
+      // Profile load failure fallback
+    } finally {
+      setProfileLoading(false)
+    }
+  }, [session])
+
+  useEffect(() => {
+    loadProfile()
+  }, [loadProfile])
+
+  useEffect(() => {
+    if (session?.userId) {
+      setPromptDismissed(isProfilePromptDismissed(session.userId))
+    }
+  }, [session?.userId])
+
+  const profileCompletion = useMemo(
+    () => evaluateProfileCompletion(profile),
+    [profile],
+  )
+
+  // Automatic onboarding tour for first-time login — only after profile is complete
   useEffect(() => {
     if (!session || session.role === 'Admin' || session.role === 'Agent') return
+    // If profile is incomplete, suppress automatic tour prompt
+    if (profile && !profileCompletion.isComplete) return
     if (isTourEligible(session)) {
       const timer = setTimeout(() => {
         setTourOpen(true)
       }, 600)
       return () => clearTimeout(timer)
     }
-  }, [session])
+  }, [session, profile, profileCompletion.isComplete])
 
   const handleStartTour = useCallback(() => {
     if (!session?.userId) return
@@ -158,6 +209,7 @@ function App() {
       clearSession()
       setSession(null)
       setSubscription(null)
+      setProfile(null)
       setActivePage('Login')
       setMenuOpen(false)
     }
@@ -187,6 +239,12 @@ function App() {
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [menuOpen])
 
+  useEffect(() => {
+    if (!appToast) return undefined
+    const timer = setTimeout(() => setAppToast(''), 4000)
+    return () => clearTimeout(timer)
+  }, [appToast])
+
   const features = subscription?.features ?? []
   const isLocked = (page) => {
     if (session?.role === 'Admin' || session?.role === 'Agent') return false
@@ -197,13 +255,25 @@ function App() {
   const handleAuthenticated = (nextSession) => {
     saveSession(nextSession)
     setSession(nextSession)
-    setActivePage(getDefaultPage(nextSession.role))
+    const pendingDestination = returnTo || getReturnTo()
+    clearReturnTo()
+    setReturnToState(null)
+    const defaultPage = getDefaultPage(nextSession.role)
+    const target =
+      pendingDestination && (nextSession.role === 'Student' || nextSession.role === 'Agent')
+        ? pendingDestination
+        : defaultPage
+    goTo(target)
+    if (nextSession?.userId) {
+      setPromptDismissed(isProfilePromptDismissed(nextSession.userId))
+    }
   }
 
   const handleLogout = () => {
     clearSession()
     setSession(null)
     setSubscription(null)
+    setProfile(null)
     setActivePage('Home')
     setMenuOpen(false)
   }
@@ -225,25 +295,75 @@ function App() {
     }
   }
 
-  if (!session) {
-    if (activePage !== 'Login' && activePage !== 'Register') {
-      return (
-        <Home
-          onExploreCountries={() => setActivePage('Register')}
-          onGetRecommendations={() => setActivePage('Register')}
-          onSignIn={() => setActivePage('Login')}
-          onSignUp={() => setActivePage('Register')}
-          onViewDestination={() => setActivePage('Register')}
-        />
-      )
-    }
+  const handleCompleteProfilePrompt = () => {
+    goTo('Profile')
+  }
 
+  const handleSkipProfilePrompt = () => {
+    if (session?.userId) {
+      dismissProfilePrompt(session.userId)
+    }
+    setPromptDismissed(true)
+    setAppToast('Your profile is incomplete. Recommendations, scholarship matching, and the roadmap may not work correctly until you complete it.')
+  }
+
+  const handleHomeNavigate = (page) => {
+    if (!session && (page === 'Scholarships' || page === 'Community')) {
+      setReturnToState(page)
+      goTo('Login')
+    } else {
+      goTo(page)
+    }
+  }
+
+  if (activePage === 'Home' || (!session && activePage !== 'Login' && activePage !== 'Register')) {
+    return (
+      <Home
+        isAuthenticated={Boolean(session)}
+        onExploreCountries={() => goTo(session ? 'Discovery' : 'Register')}
+        onGetRecommendations={() => goTo(session ? 'Recommendations' : 'Register')}
+        onNavigate={handleHomeNavigate}
+        onSignIn={() => goTo('Login')}
+        onSignUp={() => goTo('Register')}
+        onViewDestination={() => goTo(session ? 'Discovery' : 'Register')}
+        session={session}
+      />
+    )
+  }
+
+  if (!session) {
     const AuthPage = activePage === 'Register' ? Register : Login
-    return <AuthPage onAuthenticated={handleAuthenticated} onNavigate={() => setActivePage(activePage === 'Register' ? 'Login' : 'Register')} />
+    return (
+      <AuthPage
+        onAuthenticated={handleAuthenticated}
+        onNavigate={(page) => {
+          if (page === 'Home') {
+            goTo('Home')
+          } else if (page === 'Login' || page === 'Register') {
+            goTo(page)
+          } else {
+            goTo(activePage === 'Register' ? 'Login' : 'Register')
+          }
+        }}
+        onBackToHome={() => {
+          clearReturnTo()
+          setReturnToState(null)
+          goTo('Home')
+        }}
+      />
+    )
   }
 
   const role = session.role === 'Admin' || session.role === 'Agent' ? session.role : 'Student'
   const visibleGroups = ROLE_NAV_GROUPS[role] || ROLE_NAV_GROUPS.Student
+
+  const showProfilePrompt =
+    isStudent &&
+    !profileLoading &&
+    profile !== null &&
+    !profileCompletion.isComplete &&
+    !promptDismissed &&
+    activePage !== 'Profile'
 
   // Resolve component dynamically per role
   const renderActiveContent = () => {
@@ -280,7 +400,7 @@ function App() {
         return <Scholarships onNavigate={goTo} session={session} />
       }
       if (activePage === 'Profile') {
-        return <Profile onNavigate={goTo} session={session} />
+        return <Profile onNavigate={goTo} onProfileUpdate={loadProfile} session={session} />
       }
       return <AgentPanel onNavigate={goTo} session={session} />
     }
@@ -300,8 +420,10 @@ function App() {
     return (
       <StudentComponent
         onNavigate={goTo}
+        onProfileUpdate={loadProfile}
         onStartTour={handleStartTour}
         onSubscriptionChange={loadSubscription}
+        profile={profile}
         session={session}
         subscription={subscription}
       />
@@ -335,19 +457,22 @@ function App() {
               </p>
             </div>
           </div>
-          <button
-            aria-controls="workspace-nav"
-            aria-expanded={menuOpen}
-            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-secondary-500 transition hover:bg-secondary-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 lg:hidden"
-            onClick={() => setMenuOpen((open) => !open)}
-            ref={menuButtonRef}
-            type="button"
-          >
-            <svg aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.75" viewBox="0 0 24 24">
-              {menuOpen ? <path d="M6 6l12 12M18 6 6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
-            </svg>
-          </button>
+          <div className="flex items-center gap-1.5">
+            <NotificationBell onNavigate={goTo} session={session} />
+            <button
+              aria-controls="workspace-nav"
+              aria-expanded={menuOpen}
+              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-secondary-500 transition hover:bg-secondary-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 lg:hidden"
+              onClick={() => setMenuOpen((open) => !open)}
+              ref={menuButtonRef}
+              type="button"
+            >
+              <svg aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.75" viewBox="0 0 24 24">
+                {menuOpen ? <path d="M6 6l12 12M18 6 6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+              </svg>
+            </button>
+          </div>
         </div>
 
         <div className={`${menuOpen ? 'block' : 'hidden'} lg:flex lg:min-h-0 lg:flex-1 lg:flex-col`} id="workspace-nav">
@@ -440,15 +565,36 @@ function App() {
               )}
             </div>
 
-            {session.role !== 'Admin' && session.role !== 'Agent' && (
-              <button
-                className="mt-2.5 flex min-h-9 w-full items-center gap-2 rounded-lg px-2 py-2 text-[13px] font-medium text-secondary-600 transition hover:bg-primary-50 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-                onClick={handleStartTour}
-                type="button"
-              >
-                <SparkleIcon className="h-4 w-4 text-primary-500" />
-                <span>Take Product Tour</span>
-              </button>
+            {/* Profile completion / Tour button */}
+            {isStudent && (
+              <>
+                {!profileCompletion.isComplete ? (
+                  <button
+                    className="mt-2.5 flex min-h-9 w-full items-center justify-between gap-2 rounded-lg bg-warning-50 border border-warning-200 px-2.5 py-2 text-[13px] font-bold text-warning-800 transition hover:bg-warning-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-warning-500"
+                    onClick={() => goTo('Profile')}
+                    type="button"
+                    data-testid="sidebar-complete-profile-btn"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="h-2 w-2 rounded-full bg-warning-500 animate-pulse shrink-0" />
+                      <span className="truncate">Complete Your Profile</span>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-warning-200/80 px-2 py-0.5 text-[11px] font-extrabold text-warning-900" data-testid="sidebar-profile-progress-pill">
+                      {profileCompletion.completedCount}/{profileCompletion.totalRequired}
+                    </span>
+                  </button>
+                ) : (
+                  <button
+                    className="mt-2.5 flex min-h-9 w-full items-center gap-2 rounded-lg px-2 py-2 text-[13px] font-medium text-secondary-600 transition hover:bg-primary-50 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                    onClick={handleStartTour}
+                    type="button"
+                    data-testid="sidebar-take-tour-btn"
+                  >
+                    <SparkleIcon className="h-4 w-4 text-primary-500" />
+                    <span>Take Product Tour</span>
+                  </button>
+                )}
+              </>
             )}
 
             <button
@@ -467,8 +613,24 @@ function App() {
       </aside>
 
       <main className="p-4 sm:p-6 lg:p-8 xl:p-10">
+        {/* Workspace Incomplete Profile Notice Banner */}
+        {isStudent && activePage !== 'Profile' && (
+          <ProfileIncompleteBanner
+            onNavigateToProfile={() => goTo('Profile')}
+            profileCompletion={profileCompletion}
+          />
+        )}
         {renderActiveContent()}
       </main>
+
+      {/* Prominent Profile Completion Prompt modal for students with incomplete profiles */}
+      {showProfilePrompt && (
+        <ProfileCompletionPrompt
+          onComplete={handleCompleteProfilePrompt}
+          onSkip={handleSkipProfilePrompt}
+          profileCompletion={profileCompletion}
+        />
+      )}
 
       {tourOpen && session && session.role !== 'Admin' && session.role !== 'Agent' && (
         <OnboardingTour
@@ -478,6 +640,8 @@ function App() {
           session={session}
         />
       )}
+
+      <Toast message={appToast} />
     </div>
   )
 }

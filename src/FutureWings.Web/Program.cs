@@ -4,6 +4,7 @@ using FutureWings.Application.Interfaces;
 using FutureWings.Infrastructure.Data;
 using FutureWings.Infrastructure.Services;
 using FutureWings.Web.Hubs;
+using FutureWings.Web.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -71,6 +72,8 @@ builder.Services.AddScoped<IAgentService, AgentService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IDeadlineService, DeadlineService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
+builder.Services.AddScoped<INotificationBroadcaster, SignalRNotificationBroadcaster>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<PasswordHasherService>();
 builder.Services.AddScoped<StripePaymentService>();
@@ -93,6 +96,19 @@ builder.Services
             ValidIssuer = jwtSection["Issuer"],
             ValidAudience = jwtSection["Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
+        };
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/notifications"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
         };
     });
 

@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using FutureWings.Domain.Entities;
 using FutureWings.Infrastructure.Data;
+using FutureWings.Infrastructure.Services;
 using FWSubscriptionService = FutureWings.Infrastructure.Services.SubscriptionService;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -185,6 +186,153 @@ public class SubscriptionServiceTests
         // Downgrade back to Free
         var downgradedStatus = await service.SimulateUpgradeAsync(1, "Free");
         Assert.Equal("Free", downgradedStatus.Tier);
+    }
+
+    [Fact]
+    public async Task UnlockProDemoAsync_InDemoMode_GrantsOnlyProTierAndRoadmapEntitlement()
+    {
+        using var context = CreateInMemoryDbContext();
+        var config = CreateConfiguration(new Dictionary<string, string?>
+        {
+            ["DemoMode:Enabled"] = "true",
+            ["Stripe:AllowSimulatedCheckout"] = "true"
+        });
+
+        var service = new FWSubscriptionService(context, config);
+        var status = await service.UnlockProDemoAsync(1);
+
+        // Grants strictly Pro tier
+        Assert.Equal(SubscriptionPlans.Pro, status.Tier);
+        Assert.True(status.IsDemoMode);
+
+        // Entitlements: Roadmap is unlocked, AI Interview is strictly locked
+        Assert.Contains(SubscriptionPlans.FeatureRoadmap, status.Features);
+        Assert.DoesNotContain(SubscriptionPlans.FeatureAiInterview, status.Features);
+
+        // Database verified
+        var user = await context.Users.FindAsync(1);
+        Assert.NotNull(user);
+        Assert.Equal(SubscriptionPlans.Pro, user.SubscriptionTier);
+        Assert.NotNull(user.SubscriptionRenewsAt);
+
+        var payments = await context.Payments.Where(p => p.UserId == 1).ToListAsync();
+        Assert.Single(payments);
+        Assert.Equal(9m, payments[0].Amount);
+        Assert.Equal("Simulated", payments[0].Status);
+    }
+
+    [Fact]
+    public async Task UnlockProDemoAsync_InProduction_ThrowsInvalidOperationException()
+    {
+        using var context = CreateInMemoryDbContext();
+        var config = CreateConfiguration(new Dictionary<string, string?>
+        {
+            ["ASPNETCORE_ENVIRONMENT"] = "Production",
+            ["DemoMode:Enabled"] = "true",
+            ["Stripe:AllowSimulatedCheckout"] = "true"
+        });
+
+        var service = new FWSubscriptionService(context, config);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.UnlockProDemoAsync(1));
+
+        Assert.Contains("disabled", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task UnlockProDemoAsync_WhenDemoModeDisabled_ThrowsInvalidOperationException()
+    {
+        using var context = CreateInMemoryDbContext();
+        var config = CreateConfiguration(new Dictionary<string, string?>
+        {
+            ["ASPNETCORE_ENVIRONMENT"] = "Development",
+            ["DemoMode:Enabled"] = "false",
+            ["Stripe:AllowSimulatedCheckout"] = "false"
+        });
+
+        var service = new FWSubscriptionService(context, config);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.UnlockProDemoAsync(1));
+    }
+
+    [Fact]
+    public async Task UnlockProDemoAsync_IsIdempotent_DoesNotCreateDuplicatePaymentsOrSubscriptions()
+    {
+        using var context = CreateInMemoryDbContext();
+        var config = CreateConfiguration(new Dictionary<string, string?>
+        {
+            ["DemoMode:Enabled"] = "true",
+            ["Stripe:AllowSimulatedCheckout"] = "true"
+        });
+
+        var service = new FWSubscriptionService(context, config);
+
+        // Call 3 times consecutively
+        var status1 = await service.UnlockProDemoAsync(1);
+        var status2 = await service.UnlockProDemoAsync(1);
+        var status3 = await service.UnlockProDemoAsync(1);
+
+        Assert.Equal("Pro", status1.Tier);
+        Assert.Equal("Pro", status2.Tier);
+        Assert.Equal("Pro", status3.Tier);
+
+        // Verify that exactly ONE simulated payment record was recorded
+        var payments = await context.Payments.Where(p => p.UserId == 1).ToListAsync();
+        Assert.Single(payments);
+        Assert.Equal("Simulated", payments[0].Status);
+
+        var user = await context.Users.FindAsync(1);
+        Assert.Equal("Pro", user!.SubscriptionTier);
+    }
+
+    [Fact]
+    public async Task UnlockProDemoAsync_WhenUserHasPremium_PreservesPremiumEntitlements()
+    {
+        using var context = CreateInMemoryDbContext();
+        var premiumUser = await context.Users.FindAsync(1);
+        premiumUser!.SubscriptionTier = SubscriptionPlans.Premium;
+        premiumUser.SubscriptionRenewsAt = DateTimeOffset.UtcNow.AddMonths(1);
+        await context.SaveChangesAsync();
+
+        var config = CreateConfiguration(new Dictionary<string, string?>
+        {
+            ["DemoMode:Enabled"] = "true",
+            ["Stripe:AllowSimulatedCheckout"] = "true"
+        });
+
+        var service = new FWSubscriptionService(context, config);
+
+        var status = await service.UnlockProDemoAsync(1);
+
+        // Must preserve existing Premium tier and entitlements
+        Assert.Equal(SubscriptionPlans.Premium, status.Tier);
+        Assert.Contains(SubscriptionPlans.FeatureAiInterview, status.Features);
+        Assert.Contains(SubscriptionPlans.FeatureRoadmap, status.Features);
+
+        // Must not inject any simulated payment
+        var payments = await context.Payments.Where(p => p.UserId == 1).ToListAsync();
+        Assert.Empty(payments);
+    }
+
+    [Fact]
+    public async Task SimulateUpgradeAsync_ToPremium_ThrowsInvalidOperationException()
+    {
+        using var context = CreateInMemoryDbContext();
+        var config = CreateConfiguration(new Dictionary<string, string?>
+        {
+            ["DemoMode:Enabled"] = "true",
+            ["Stripe:AllowSimulatedCheckout"] = "true"
+        });
+
+        var service = new FWSubscriptionService(context, config);
+
+        // Premium simulated upgrade is explicitly rejected to keep Premium locked
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.SimulateUpgradeAsync(1, "Premium"));
+
+        Assert.Contains("Premium requires a real subscription", ex.Message);
     }
 
     [Fact]
