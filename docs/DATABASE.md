@@ -29,7 +29,7 @@ against existing rows, so restarts never duplicate data.
 
 ## Migration history
 
-Six migrations, in order:
+Eight migrations, in order:
 
 | # | Migration | What it does |
 | --- | --- | --- |
@@ -39,6 +39,8 @@ Six migrations, in order:
 | 4 | `20260829094311_AddUserRoles` | `Users.Role` (default `Student`) + raw SQL promoting `MIN(Id)` to `Admin` |
 | 5 | `20260831153703_AddDiscoveryCatalog` | `Universities.City`; `Programs.{Level, AnnualTuitionUsd, DurationMonths, MatchScore, Tags}`; `Countries.{Description, IsFeatured}`; unique `IX_Countries_Code`; `SavedPrograms` join table |
 | 6 | `20260831183345_AddHasSeededDeadlinesFlag` | `Users.HasSeededDeadlines` + backfill (see below) |
+| 7 | `20260918131933_AddScholarshipDetails` | `Scholarships.{AwardAmount, Deadline, EligibilityCriteria}` |
+| 8 | `20261102155309_AddScholarshipProcessAndDetails` | `Scholarships.{Description, RequiredDocuments, StudyLevel, FieldOfStudy, OfficialLink}`; `ScholarshipInterests` table; `ScholarshipChecklistSteps` table; `ProcessedWebhookEvents` table |
 
 ### Migration 6 is worth reading
 
@@ -75,9 +77,9 @@ Two details that matter if you write something similar:
 
 ## Schema
 
-15 tables plus `__EFMigrationsHistory`. Every foreign key is `ON DELETE CASCADE`, so
+17 tables plus `__EFMigrationsHistory`. Every foreign key is `ON DELETE CASCADE`, so
 deleting a `User` removes their profile, deadlines, documents, ratings, notifications,
-payments, saved programs, and applications.
+payments, saved programs, applications, and scholarship interests.
 
 ### Identity & access
 
@@ -94,6 +96,9 @@ payments, saved programs, and applications.
 | `Universities` | `Id`, `CountryId`, `Name(200)`, `City(100)` | |
 | `Programs` | `Id`, `UniversityId`, `Name(200)`, `Level(50)`, `AnnualTuitionUsd decimal(12,2)`, `DurationMonths`, `MatchScore`, `Tags(500)` | `Tags` is a comma-separated string, split in `DiscoveryService` |
 | `SavedPrograms` | `UserId`, `ProgramId`, `SavedAt` | **Composite PK** `(UserId, ProgramId)`; cascade both ways |
+| `Scholarships` | `Id`, `CountryId`, `Name(200)`, `Description(2000)`, `EligibilityCriteria(1000)`, `RequiredDocuments(1000)`, `StudyLevel(100)`, `FieldOfStudy(200)`, `OfficialLink(500)`, `AwardAmount(12,2)`, `Deadline` | Unique `IX_Scholarships_CountryId_Name` |
+| `ScholarshipInterests` | `Id`, `UserId`, `ScholarshipId`, `CreatedAt` | Unique `IX_ScholarshipInterests_UserId_ScholarshipId`; cascade delete on both sides |
+| `ScholarshipChecklistSteps` | `Id`, `ScholarshipInterestId`, `StepKey(100)`, `Title(200)`, `Description(1000)`, `StepOrder`, `IsCompleted`, `CompletedAt` | Composite `IX_ScholarshipChecklistSteps_ScholarshipInterestId_StepOrder` |
 
 ### Deadlines
 
@@ -101,56 +106,29 @@ payments, saved programs, and applications.
 | --- | --- | --- |
 | `Deadlines` | `Id`, `UserId`, `Title(200)`, `Category(50)`, `Notes(1000) NULL`, `DueAt`, `CreatedAt`, `CompletedAt NULL` | `IX_Deadlines_UserId_DueAt`. `CompletedAt IS NULL` means active — there is no boolean column; `DeadlineDto.IsCompleted` is computed |
 
-### Applications domain — schema exists, code does not
+### Applications domain
 
 | Table | Columns | Notes |
 | --- | --- | --- |
-| `Applications` | `Id`, `UserId`, `ProgramId`, `ApplicationStateId`, `SubmittedAt` | Nothing writes to it — `ApplicationService` is a stub |
+| `Applications` | `Id`, `UserId`, `ProgramId`, `ApplicationStateId`, `SubmittedAt` | Tracked by `ApplicationService` |
 | `ApplicationStates` | `Id`, `Name` | Seeded: Draft, Submitted, Under Review, Accepted, Rejected, Withdrawn |
-| `VisaOutcomes` | `Id`, `ApplicationId`, `Status`, `DecisionDate NULL` | 1:1 with `Applications`. Unwritten |
-
-`ApplicationStateId` is a non-nullable FK, so before `ApplicationStates` was seeded no
-application row could be inserted **at all** — the feature was blocked at the database
-level, not just the service layer. That is now fixed; inserts succeed.
-
-### Tables with no code behind them
-
-`Documents`, `Notifications`, `Payments`, `Ratings`, and `Scholarships` all exist with
-foreign keys and indexes, and **nothing reads or writes them**. Their services are stubs.
-`Scholarships` is not seeded either, so `GET /api/scholarship` returns `[]` by
-construction.
-
-Note `ScholarshipDto` exposes `EligibilityCriteria` and `AwardAmount`, which **do not
-exist** on the `Scholarship` entity or table. Implementing that feature needs a migration
-first.
+| `VisaOutcomes` | `Id`, `ApplicationId`, `Status`, `DecisionDate NULL` | 1:1 with `Applications` |
 
 ## Column sizing
 
-Tables belonging to implemented features have deliberate lengths; tables belonging to
-stub features are all `nvarchar(max)` because their entities were never configured in
-`OnModelCreating`:
+Tables belonging to implemented features have deliberate lengths:
 
-| Configured | Unconfigured (`nvarchar(max)`) |
-| --- | --- |
-| `Users`, `UserProfiles`*, `Countries`, `Universities`, `Programs`, `Deadlines` | `ApplicationStates.Name`, `Documents.FileName/FilePath`, `Notifications.Message`, `Payments.Currency/Status`, `Ratings.Comment`, `Scholarships.Name`, `VisaOutcomes.Status` |
-
-\* `UserProfiles.FirstName/LastName` are also `nvarchar(max)` despite the feature being
-live — worth tightening.
-
-Add `HasMaxLength` when you implement one of these; changing it later means another
-migration. Decimals are explicit: `Payments.Amount` is `(18,2)`, `Programs.AnnualTuitionUsd`
-is `(12,2)`.
+| Configured |
+| --- |
+| `Users`, `UserProfiles`, `Countries`, `Universities`, `Programs`, `Scholarships`, `ScholarshipInterests`, `ScholarshipChecklistSteps`, `Deadlines`, `Documents`, `Payments`, `ProcessedWebhookEvents` |
 
 ## Seeding
 
 | Seeder | Seeds | Idempotency |
 | --- | --- | --- |
 | `ApplicationStateSeeder` | 6 lifecycle states | Diffs against existing names, inserts only what is missing |
-| `DiscoverySeeder` | 6 countries / universities / programs (Canada, Germany, Australia, Netherlands, UK, Finland) | Upserts by natural key (country code, university name, program name) |
+| `DiscoverySeeder` | 14 countries, 36 universities, 53 programs, 26 verified scholarships, 10 community reviews | Upserts by natural key |
 | `DefaultDeadlineFactory` | 7 onboarding deadlines per new user | **Not** a startup seeder — called once from `AuthService.RegisterAsync`, guarded by `User.HasSeededDeadlines` |
-
-The distinction matters: the first two are reference data refreshed at boot; the third is
-per-user data created exactly once at registration. Do not move it back into a read path.
 
 ## Adding a migration
 

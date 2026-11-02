@@ -30,4 +30,5 @@ public class User
     public ICollection<Payment> Payments { get; set; } = [];
     public ICollection<Deadline> Deadlines { get; set; } = [];
     public ICollection<SavedProgram> SavedPrograms { get; set; } = [];
+    public ICollection<ScholarshipInterest> ScholarshipInterests { get; set; } = [];
 }

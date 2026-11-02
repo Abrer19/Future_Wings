@@ -3,7 +3,7 @@
 ![Continuous Integration](https://github.com/Abrer19/Future_Wings/actions/workflows/ci.yml/badge.svg)
 ![.NET 8](https://img.shields.io/badge/.NET-8.0-purple.svg)
 ![React 19](https://img.shields.io/badge/React-19-blue.svg)
-![Tests](https://img.shields.io/badge/Tests-175%20Passed-success.svg)
+![Tests](https://img.shields.io/badge/Tests-198%20Passed-success.svg)
 
 A modern, full-stack study-abroad planning and application tracking platform. Students discover university programs worldwide, shortlist and compare degrees, manage application lifecycles and deadlines, store essential visa and admission documents, and receive personalized AI-driven program recommendations. Administrators have an operations console for managing users and monitoring platform activity.
 
@@ -123,9 +123,10 @@ cd ClientApp
 npm test -- --run
 ```
 
-### Test Coverage (144 Backend Tests + 31 Frontend Tests = 175 Total)
+### Test Coverage (156 Backend Tests + 42 Frontend Tests = 198 Total)
 - **Authentication Security**: Privilege escalation prevention (first user cannot become Admin), BCrypt password hashing & salt verification, token claim injection, role-based authorization.
 - **Stripe & Subscriptions**: Demo-mode gating, Pro-only entitlement granting, production simulation rejection, idempotent webhook and demo unlock handling, invalid return URL rejection, live key safety guards.
+- **Scholarships & Application Process Tracking**: Dedicated scholarship details view with study-level and field restrictions, official links, document criteria, idempotent user interest tracking, ordered application checklist generation, step-level completion toggling, and user ownership isolation.
 - **Document Security**: Binary magic byte signatures (`%PDF`, `\x89PNG`, `JPEG`, `DOC`, `DOCX`), MIME spoofing detection, 10 MB size enforcement, path traversal defense, and ownership isolation.
 - **Applications & Tracking**: Multi-status workflow (`Draft`, `Submitted`, `Under Review`, `Accepted`, `Withdrawn`), user isolation, deduplication constraints, deletion.
 - **Deadlines & Planner**: Task creation, category classification, completion toggles, removal.
