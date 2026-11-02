@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { apiRequest } from '../auth.js'
 import Toast from '../components/ui/Toast.jsx'
-import { BTN_PRIMARY, CARD, CONTROL, FOCUS } from '../components/ui/styles.js'
+import { CONTROL } from '../components/ui/styles.js'
+import { SparkleIcon } from '../components/home/icons.jsx'
 
 const degreeLevels = ["Bachelor's", "Master's", 'PhD', 'Diploma', 'Certificate']
 
@@ -25,7 +26,7 @@ const toPayload = (form) => ({
 
 const STUDY_FIELDS = ['cgpa', 'major', 'budgetUsd', 'degreeLevel']
 
-export default function Profile({ session }) {
+export default function Profile({ session, onStartTour }) {
   const [form, setForm] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -74,7 +75,10 @@ export default function Profile({ session }) {
   return (
     <div className="mx-auto max-w-4xl space-y-8 pb-16">
       {/* Header Banner */}
-      <header className="relative overflow-hidden rounded-3xl border border-secondary-200 bg-gradient-to-r from-secondary-950 via-secondary-900 to-secondary-950 p-6 sm:p-8 text-white shadow-xl">
+      <header
+        data-tour="profile-header"
+        className="relative overflow-hidden rounded-3xl border border-secondary-200 bg-gradient-to-r from-secondary-950 via-secondary-900 to-secondary-950 p-6 sm:p-8 text-white shadow-xl"
+      >
         <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary-500/15 blur-3xl" />
         <div className="flex flex-wrap items-center justify-between gap-6 relative z-10">
           <div>
@@ -92,9 +96,21 @@ export default function Profile({ session }) {
             </p>
           </div>
 
-          <div className="rounded-2xl bg-white/10 backdrop-blur-md px-5 py-3 border border-white/15 text-center min-w-[130px]">
-            <span className="block text-[10px] font-bold uppercase tracking-wider text-secondary-300">Profile Match</span>
-            <span className="font-mono text-2xl font-black text-primary-400">{completionPercent}%</span>
+          <div className="flex items-center gap-3">
+            {onStartTour && (
+              <button
+                className="inline-flex items-center gap-2 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 px-4 py-2.5 text-xs font-bold text-white shadow-sm backdrop-blur-md transition hover:scale-[1.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
+                onClick={onStartTour}
+                type="button"
+              >
+                <SparkleIcon className="h-4 w-4 text-primary-400" />
+                <span>Take Product Tour</span>
+              </button>
+            )}
+            <div className="rounded-2xl bg-white/10 backdrop-blur-md px-5 py-3 border border-white/15 text-center min-w-[130px]">
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-secondary-300">Profile Match</span>
+              <span className="font-mono text-2xl font-black text-primary-400">{completionPercent}%</span>
+            </div>
           </div>
         </div>
       </header>
@@ -115,7 +131,11 @@ export default function Profile({ session }) {
           ))}
         </div>
       ) : form ? (
-        <form className="rounded-3xl border border-secondary-200/80 bg-white p-6 sm:p-8 shadow-sm space-y-6" onSubmit={save}>
+        <form
+          data-tour="profile-fields"
+          className="rounded-3xl border border-secondary-200/80 bg-white p-6 sm:p-8 shadow-sm space-y-6"
+          onSubmit={save}
+        >
           <div className="flex items-center justify-between border-b border-secondary-100 pb-4">
             <h2 className="text-base font-extrabold text-secondary-950">Personal & Academic Details</h2>
             <span className="text-xs font-bold text-primary-600 bg-primary-50 border border-primary-200 px-2.5 py-0.5 rounded-lg">

@@ -119,7 +119,10 @@ export default function VisaCheck({ session }) {
   return (
     <div className="mx-auto max-w-6xl space-y-8 pb-16">
       {/* Header Banner */}
-      <header className="relative overflow-hidden rounded-3xl border border-secondary-200 bg-gradient-to-r from-secondary-950 via-secondary-900 to-secondary-950 p-6 text-white shadow-xl sm:p-8">
+      <header
+        data-tour="visa-check-header"
+        className="relative overflow-hidden rounded-3xl border border-secondary-200 bg-gradient-to-r from-secondary-950 via-secondary-900 to-secondary-950 p-6 text-white shadow-xl sm:p-8"
+      >
         <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary-500/15 blur-3xl" />
         <div className="max-w-3xl relative z-10">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-500/20 border border-primary-400/30 px-3 py-0.5 text-xs font-bold uppercase tracking-wider text-primary-300">

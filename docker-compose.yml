@@ -6,13 +6,13 @@ services:
     container_name: futurewings-sqlserver
     environment:
       - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=YourStrong@Pass123!
+      - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD:-YourStrong@Pass123!}
     ports:
       - "1433:1433"
     volumes:
       - sqlserver-data:/var/opt/mssql/data
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Pass123!' -C -Q 'SELECT 1' || exit 1"]
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD:-YourStrong@Pass123!}\" -C -Q 'SELECT 1' || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,11 +26,18 @@ services:
       sqlserver:
         condition: service_healthy
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=FutureWings;User Id=sa;Password=YourStrong@Pass123!;TrustServerCertificate=True;MultipleActiveResultSets=True
-      - Jwt__Secret=a-random-super-secret-key-that-is-at-least-thirty-two-chars-long!
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+      - FUTUREWINGS_DEMO_MODE=${FUTUREWINGS_DEMO_MODE:-true}
+      - FUTUREWINGS_SEED_STAFF=${FUTUREWINGS_SEED_STAFF:-false}
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=FutureWings;User Id=sa;Password=${MSSQL_SA_PASSWORD:-YourStrong@Pass123!};TrustServerCertificate=True;MultipleActiveResultSets=True
+      - Jwt__Secret=${JWT_SECRET:-a-random-super-secret-key-that-is-at-least-thirty-two-chars-long!}
+      - DocumentStorage__Path=/app/App_Data/documents
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+    volumes:
+      - document-data:/app/App_Data/documents
     ports:
       - "5002:5002"
 
 volumes:
   sqlserver-data:
+  document-data:

@@ -1,9 +1,11 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using FutureWings.Application.Interfaces;
 using FutureWings.Infrastructure.Data;
 using FutureWings.Infrastructure.Services;
 using FutureWings.Web.Hubs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -48,7 +50,12 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddSignalR();
 
 builder.Services.AddDbContext<FutureWingsDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        sqlOptions => sqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(30),
+            errorNumbersToAdd: null)));
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
@@ -89,21 +96,54 @@ builder.Services
         };
     });
 
+// Configurable CORS origins
+var configuredOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? builder.Configuration["CORS_ALLOWED_ORIGINS"]?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    ?? Array.Empty<string>();
+
+var defaultDevOrigins = new[] { "http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000" };
+var effectiveOrigins = configuredOrigins.Length > 0
+    ? configuredOrigins
+    : (builder.Environment.IsDevelopment() ? defaultDevOrigins : Array.Empty<string>());
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
-        policy.WithOrigins("http://localhost:5173", "http://127.0.0.1:5173")
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials());
+    {
+        if (effectiveOrigins.Length > 0)
+        {
+            policy.WithOrigins(effectiveOrigins)
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        }
+        else if (builder.Environment.IsDevelopment())
+        {
+            policy.WithOrigins(defaultDevOrigins)
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        }
+    });
+});
+
+// Rate limiting for sensitive authentication endpoints
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddFixedWindowLimiter("auth-policy", opt =>
+    {
+        opt.PermitLimit = 10;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 0;
+    });
 });
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-// This is an API-only host: unhandled exceptions and bare status codes come back as
-// RFC 7807 problem-details JSON in every environment. The previous handler pointed at
-// an MVC error view, which no longer exists.
+// Unhandled exceptions and bare status codes come back as RFC 7807 problem-details JSON in every environment.
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
@@ -114,7 +154,7 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+    // The default HSTS value is 30 days.
     app.UseHsts();
 }
 
@@ -122,8 +162,12 @@ app.UseHttpsRedirection();
 app.UseRouting();
 
 app.UseCors("Frontend");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapGet("/health", () => Results.Ok(new { status = "Healthy", timestamp = DateTimeOffset.UtcNow })).AllowAnonymous();
+app.MapGet("/api/health", () => Results.Ok(new { status = "Healthy", timestamp = DateTimeOffset.UtcNow })).AllowAnonymous();
 
 app.MapControllers();
 app.MapHub<NotificationHub>("/hubs/notifications");
@@ -141,7 +185,20 @@ using (var scope = app.Services.CreateScope())
     }
     await ApplicationStateSeeder.SeedAsync(context);
     await DiscoverySeeder.SeedAsync(context);
-    await DemoUserSeeder.SeedAsync(context);
+
+    // Gated Demo Mode: Explicitly opt-in through secure configuration flag
+    var isDemoMode = builder.Configuration.GetValue<bool>("DemoMode:Enabled") ||
+        string.Equals(Environment.GetEnvironmentVariable("FUTUREWINGS_DEMO_MODE"), "true", StringComparison.OrdinalIgnoreCase);
+
+    if (isDemoMode)
+    {
+        // Privileged staff accounts (Admin / Agent) remain strictly opt-in and off by default.
+        // In Production, staff accounts are strictly prohibited from seeding to preserve security.
+        var seedStaff = !app.Environment.IsProduction() && (
+            builder.Configuration.GetValue<bool>("DemoMode:SeedStaffAccounts") ||
+            string.Equals(Environment.GetEnvironmentVariable("FUTUREWINGS_SEED_STAFF"), "true", StringComparison.OrdinalIgnoreCase));
+        await DemoUserSeeder.SeedAsync(context, seedStaff);
+    }
 }
 
 app.Run();

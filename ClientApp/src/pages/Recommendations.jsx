@@ -59,7 +59,10 @@ export default function Recommendations({ session }) {
   return (
     <div className="mx-auto max-w-7xl space-y-8 pb-16">
       {/* Header Banner */}
-      <header className="relative overflow-hidden flex flex-col justify-between gap-6 rounded-3xl border border-secondary-200 bg-gradient-to-r from-secondary-950 via-secondary-900 to-secondary-950 p-6 text-white shadow-xl sm:flex-row sm:items-end sm:p-10">
+      <header
+        data-tour="recommendations-header"
+        className="relative overflow-hidden flex flex-col justify-between gap-6 rounded-3xl border border-secondary-200 bg-gradient-to-r from-secondary-950 via-secondary-900 to-secondary-950 p-6 text-white shadow-xl sm:flex-row sm:items-end sm:p-10"
+      >
         <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary-500/15 blur-3xl" />
         <div className="max-w-3xl relative z-10">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-500/20 border border-primary-400/30 px-3 py-0.5 text-xs font-bold uppercase tracking-wider text-primary-300">
@@ -111,7 +114,7 @@ export default function Recommendations({ session }) {
       )}
 
       {/* Program Cards Grid */}
-      <section aria-labelledby="matches-title">
+      <section data-tour="recommendations-container" aria-labelledby="matches-title">
         <div className="mb-6">
           <p className="text-xs font-bold uppercase tracking-wider text-primary-600">Ranked by Profile Fit</p>
           <h2 className="mt-0.5 text-2xl font-black text-secondary-950" id="matches-title">

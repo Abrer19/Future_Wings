@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiRequest } from '../auth.js'
-import { CARD } from '../components/ui/styles.js'
 
+const API_URL = import.meta.env.VITE_API_URL ?? '/api'
 const formatSize = (bytes) => bytes < 1024 * 1024 ? `${Math.ceil(bytes / 1024)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`
 
 export default function Documents({ session }) {
@@ -59,7 +59,7 @@ export default function Documents({ session }) {
   const download = async (document) => {
     setError('')
     try {
-      const response = await fetch(`/api/documents/${document.id}/download`, {
+      const response = await fetch(`${API_URL}/documents/${document.id}/download`, {
         headers: { Authorization: `Bearer ${session.token}` },
       })
       if (!response.ok) throw new Error('The document could not be downloaded.')

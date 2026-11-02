@@ -23,6 +23,7 @@ public sealed class FutureWingsDbContext(DbContextOptions<FutureWingsDbContext> 
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Deadline> Deadlines => Set<Deadline>();
     public DbSet<SavedProgram> SavedPrograms => Set<SavedProgram>();
+    public DbSet<ProcessedWebhookEvent> ProcessedWebhookEvents => Set<ProcessedWebhookEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -189,6 +190,14 @@ public sealed class FutureWingsDbContext(DbContextOptions<FutureWingsDbContext> 
             entity.Property(deadline => deadline.Category).HasMaxLength(50);
             entity.Property(deadline => deadline.Notes).HasMaxLength(1000);
             entity.HasIndex(deadline => new { deadline.UserId, deadline.DueAt });
+        });
+
+        modelBuilder.Entity<ProcessedWebhookEvent>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.StripeEventId).HasMaxLength(100);
+            entity.HasIndex(e => e.StripeEventId).IsUnique();
+            entity.Property(e => e.EventType).HasMaxLength(100);
         });
     }
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { apiRequest } from '../auth.js'
 import Toast from '../components/ui/Toast.jsx'
+import ReviewCard from '../components/community/ReviewCard.jsx'
 import { BTN_PRIMARY, BTN_QUIET, CARD, CONTROL } from '../components/ui/styles.js'
 
 const emptyDiscovery = { programs: [] }
@@ -302,25 +303,7 @@ export default function Community({ session, onNavigate }) {
                   <p className="mt-1 text-sm text-secondary-500">Be the first to review this university.</p>
                 </div>
               ) : reviews.map((review) => (
-                <article className="rounded-lg border border-secondary-200 bg-white p-4" key={review.id}>
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-50 text-xs font-bold text-primary-700">
-                      {initials(review.reviewerName)}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="font-bold text-secondary-950">{review.reviewerName}</h3>
-                        {review.isMine && <span className="rounded-full bg-success-50 px-2 py-0.5 text-xs font-bold text-success-700">Your review</span>}
-                        <span className="rounded-full bg-primary-50 px-2 py-0.5 text-xs font-bold text-primary-700">
-                          {ratingText(review.score)}
-                        </span>
-                      </div>
-                      <p className="mt-2 text-sm leading-6 text-secondary-600">
-                        {review.comment || 'No written comment provided.'}
-                      </p>
-                    </div>
-                  </div>
-                </article>
+                <ReviewCard key={review.id} review={review} />
               ))}
             </div>
           </section>

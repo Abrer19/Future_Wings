@@ -1,75 +1,186 @@
-import { useEffect, useState } from 'react'
-import DestinationArticle from './DestinationArticle.jsx'
+import { useRef } from 'react'
 import SectionHeading from './SectionHeading.jsx'
-import { ArrowRightIcon } from './icons.jsx'
-import { destinationArticles } from './destinationArticles.js'
+import { ArrowRightIcon, TrophyIcon, ClockIcon } from './icons.jsx'
+import { useScrollReveal } from '../../lib/useScrollAnimation.js'
 
-const tierStyles = {
-  'Tier 1': 'bg-primary-500/10 text-primary-500',
-  'Tier 2': 'bg-warning/15 text-warning-700',
-}
+const destinations = [
+  {
+    name: 'United States',
+    flag: '🇺🇸',
+    tier: 'Tier 1 Global Ivy',
+    tierColor: 'bg-primary-50 text-primary-800 border-primary-200',
+    avgCost: '$25k – $55k/yr',
+    workRights: 'OPT 1–3 Years',
+    acceptanceRate: 'Competitive (12–35%)',
+    highlight: 'World-renowned research labs, Silicon Valley tech ecosystem & 36-month STEM OPT extension.',
+    topUniversities: 'MIT, Stanford, Berkeley, NYU',
+  },
+  {
+    name: 'United Kingdom',
+    flag: '🇬🇧',
+    tier: 'Tier 1 Heritage',
+    tierColor: 'bg-blue-50 text-blue-800 border-blue-200',
+    avgCost: '£14k – £32k/yr',
+    workRights: '2-Yr Graduate Route',
+    acceptanceRate: 'Selective (20–45%)',
+    highlight: '1-Year accelerated Master’s programs and historic Russell Group research institutions.',
+    topUniversities: 'Oxford, Cambridge, UCL, Imperial',
+  },
+  {
+    name: 'Canada',
+    flag: '🇨🇦',
+    tier: 'Tier 1 Immigration',
+    tierColor: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+    avgCost: 'CAD $18k – $38k/yr',
+    workRights: '3-Yr PGWP Available',
+    acceptanceRate: 'Accessible (30–60%)',
+    highlight: 'Clear post-graduation work permits, welcoming culture, and world-class co-op internships.',
+    topUniversities: 'Toronto, UBC, McGill, Waterloo',
+  },
+  {
+    name: 'Germany',
+    flag: '🇩🇪',
+    tier: 'Tier 2 Low Tuition',
+    tierColor: 'bg-amber-50 text-amber-800 border-amber-200',
+    avgCost: '€0 – €3k/yr',
+    workRights: '18-Mo Job Seeker',
+    acceptanceRate: 'Merit-Based (25–50%)',
+    highlight: 'Virtually zero tuition fees at prestigious public technical universities (TU9) with robust engineering hubs.',
+    topUniversities: 'TUM, RWTH Aachen, Heidelberg, KIT',
+  },
+  {
+    name: 'Australia',
+    flag: '🇦🇺',
+    tier: 'Tier 1 Quality of Life',
+    tierColor: 'bg-indigo-50 text-indigo-800 border-indigo-200',
+    avgCost: 'AUD $28k – $46k/yr',
+    workRights: '2–4 Yr Post-Study',
+    acceptanceRate: 'Balanced (35–65%)',
+    highlight: 'High student minimum wages, Group of Eight prestige, and generous regional permanent residency perks.',
+    topUniversities: 'Melbourne, Sydney, UNSW, ANU',
+  },
+  {
+    name: 'Japan',
+    flag: '🇯🇵',
+    tier: 'Tier 2 High Tech',
+    tierColor: 'bg-rose-50 text-rose-800 border-rose-200',
+    avgCost: '$5k – $15k/yr',
+    workRights: 'Designated Visa Track',
+    acceptanceRate: 'Specific (20–40%)',
+    highlight: 'Generous MEXT government scholarships, cutting-edge robotics & AI engineering, and safe student cities.',
+    topUniversities: 'Tokyo, Kyoto, Osaka, Tohoku',
+  },
+]
 
 export default function Destinations({ onViewDestination }) {
-  const articleFromHash = () => destinationArticles.find((article) => window.location.hash === `#news/${article.slug}`) ?? null
-  const [selectedArticle, setSelectedArticle] = useState(articleFromHash)
-  const [search, setSearch] = useState('')
-  const visibleArticles = destinationArticles.filter((article) =>
-    `${article.name} ${article.headline} ${article.description}`.toLowerCase().includes(search.trim().toLowerCase()))
-
-  useEffect(() => {
-    const syncArticle = () => setSelectedArticle(articleFromHash())
-    window.addEventListener('popstate', syncArticle)
-    window.addEventListener('hashchange', syncArticle)
-    return () => { window.removeEventListener('popstate', syncArticle); window.removeEventListener('hashchange', syncArticle) }
-  }, [])
-
-  const openArticle = (article) => {
-    window.history.pushState({}, '', `#news/${article.slug}`)
-    setSelectedArticle(article)
-  }
-
-  const closeArticle = () => {
-    window.history.pushState({}, '', '#news')
-    setSelectedArticle(null)
-  }
+  const containerRef = useRef(null)
+  useScrollReveal(containerRef, {
+    direction: 'up',
+    distance: 24,
+    duration: 0.8,
+    stagger: 0.1,
+  })
 
   return (
-    <>
-      <section
-        aria-labelledby="news-title"
-        className="bg-surface py-20 sm:py-24"
-        id="news"
-      >
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <SectionHeading
-            badge="FutureWings Newsroom"
-            badgeClassName="bg-success/10 text-success"
-            description="Independent, easy-to-read guides covering costs, admissions, visas, work options, and student life in every featured destination. No login required."
-            id="news-title"
-            title="Study Abroad News & Destination Guides"
-          />
+    <section
+      aria-labelledby="destinations-title"
+      className="relative bg-white py-20 sm:py-28 overflow-hidden"
+      id="destinations"
+    >
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <SectionHeading
+          badge="Global Destinations"
+          badgeClassName="bg-primary-50 text-primary-700 border border-primary-200/80"
+          description="Explore high-demand destination countries with clear admission tracks, vetted post-study work rights, and real cost profiles."
+          id="destinations-title"
+          title="Top international study destinations"
+        />
 
-          <div className="mx-auto mt-8 max-w-xl">
-            <label className="sr-only" htmlFor="news-search">Search destination articles</label>
-            <input className="w-full rounded-xl border border-secondary-200 bg-white px-4 py-3 text-sm text-secondary-950 shadow-sm outline-none transition placeholder:text-secondary-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20" id="news-search" onChange={(event) => setSearch(event.target.value)} placeholder="Search news by country or topic" type="search" value={search} />
-            <p aria-live="polite" className="mt-2 text-center text-xs text-secondary-400">{visibleArticles.length} article{visibleArticles.length === 1 ? '' : 's'} available</p>
-          </div>
+        <div className="mt-14 sm:mt-18" ref={containerRef}>
+          <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {destinations.map(
+              ({
+                name,
+                flag,
+                tier,
+                tierColor,
+                avgCost,
+                workRights,
+                highlight,
+                topUniversities,
+              }) => (
+                <li
+                  key={name}
+                  className="group relative flex flex-col justify-between rounded-3xl border border-secondary-200/80 bg-surface p-7 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-primary-300 hover:bg-white hover:shadow-xl hover:shadow-secondary-900/5"
+                >
+                  <div>
+                    {/* Header: Flag, Name, Tier Badge */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl" role="img" aria-label={`${name} flag`}>
+                          {flag}
+                        </span>
+                        <div>
+                          <h3 className="text-lg font-bold text-secondary-950 group-hover:text-primary-600 transition-colors">
+                            {name}
+                          </h3>
+                          <span className="text-[11px] text-secondary-500 font-medium">
+                            {topUniversities}
+                          </span>
+                        </div>
+                      </div>
+                      <span
+                        className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold shrink-0 ${tierColor}`}
+                      >
+                        {tier}
+                      </span>
+                    </div>
 
-          <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {visibleArticles.map((article) => (
-              <li
-                className="group overflow-hidden rounded-2xl border border-secondary-500/10 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-primary-500/30 hover:shadow-md"
-                key={article.slug}
-              >
-                <div className="flex h-24 items-center justify-between bg-gradient-to-br from-primary-600 via-primary-500 to-primary-400 px-6"><span className="flex items-center gap-2.5 font-serif text-xl font-black tracking-tight text-white/95"><span aria-hidden="true" className="text-2xl leading-none">{article.flag}</span><span>{article.name}</span></span><span className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/80">News analysis</span></div>
-                <div className="p-6"><div className="flex items-start justify-between gap-3"><h3 className="text-lg font-bold text-secondary-950">{article.name}</h3><span className={`shrink-0 rounded-md px-2 py-0.5 text-[11px] font-bold ${tierStyles[article.tier]}`}>{article.tier}</span></div><p className="mt-3 text-sm leading-6 text-secondary-500">{article.description}</p><p className="mt-3 line-clamp-2 font-serif text-base font-bold leading-6 text-secondary-800">{article.headline}</p><button className="mt-5 inline-flex items-center gap-1.5 rounded text-sm font-semibold text-primary-500 transition group-hover:gap-2.5 hover:text-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2" onClick={() => openArticle(article)} type="button">Read full article<span className="sr-only"> about {article.name}</span><ArrowRightIcon className="h-3.5 w-3.5" /></button></div>
-              </li>
-            ))}
+                    {/* Metadata Grid */}
+                    <div className="mt-5 grid grid-cols-2 gap-2 text-xs">
+                      <div className="rounded-xl bg-white border border-secondary-200/70 p-3 shadow-xs">
+                        <span className="flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider text-secondary-400">
+                          <TrophyIcon className="h-3 w-3 text-secondary-400" />
+                          Avg. Tuition
+                        </span>
+                        <span className="mt-1 block font-bold text-secondary-900">
+                          {avgCost}
+                        </span>
+                      </div>
+                      <div className="rounded-xl bg-white border border-secondary-200/70 p-3 shadow-xs">
+                        <span className="flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider text-secondary-400">
+                          <ClockIcon className="h-3 w-3 text-secondary-400" />
+                          Post-Study Visa
+                        </span>
+                        <span className="mt-1 block font-bold text-secondary-900">
+                          {workRights}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Description Highlight */}
+                    <p className="mt-4 text-xs leading-relaxed text-secondary-600">
+                      {highlight}
+                    </p>
+                  </div>
+
+                  {/* Footer button */}
+                  <div className="mt-6 pt-5 border-t border-secondary-200/60 flex items-center justify-between">
+                    <button
+                      className="inline-flex items-center gap-2 text-xs font-bold text-primary-600 hover:text-primary-700 transition-colors group/btn"
+                      onClick={() => onViewDestination?.(name)}
+                      type="button"
+                    >
+                      <span>Explore Universities in {name}</span>
+                      <ArrowRightIcon className="h-3.5 w-3.5 transition-transform duration-200 group-hover/btn:translate-x-1" />
+                    </button>
+                  </div>
+                </li>
+              )
+            )}
           </ul>
-          {visibleArticles.length === 0 && <div className="mt-10 rounded-2xl border border-dashed border-secondary-300 bg-white px-6 py-12 text-center"><p className="font-semibold text-secondary-950">No articles match that search.</p><button className="mt-3 rounded-lg px-3 py-2 text-sm font-semibold text-primary-600 hover:bg-primary-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500" onClick={() => setSearch('')} type="button">Clear search</button></div>}
         </div>
-      </section>
-      {selectedArticle && <DestinationArticle article={selectedArticle} onClose={closeArticle} onExplore={(name) => { closeArticle(); onViewDestination?.(name) }} />}
-    </>
+      </div>
+    </section>
   )
 }

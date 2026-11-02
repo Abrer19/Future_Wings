@@ -19,6 +19,9 @@ import Roadmap from './pages/Roadmap.jsx'
 import Scholarships from './pages/Scholarships.jsx'
 import Subscription from './pages/Subscription.jsx'
 import VisaCheck from './pages/VisaCheck.jsx'
+import OnboardingTour from './components/onboarding/OnboardingTour.jsx'
+import { isTourEligible, resetTourRecord } from './lib/onboardingStorage.js'
+import { SparkleIcon } from './components/home/icons.jsx'
 
 const studentPages = {
   Dashboard,
@@ -118,7 +121,25 @@ function App() {
   })
   const [menuOpen, setMenuOpen] = useState(false)
   const [subscription, setSubscription] = useState(null)
+  const [tourOpen, setTourOpen] = useState(false)
   const menuButtonRef = useRef(null)
+
+  // Automatic onboarding tour for first-time login
+  useEffect(() => {
+    if (!session || session.role === 'Admin' || session.role === 'Agent') return
+    if (isTourEligible(session)) {
+      const timer = setTimeout(() => {
+        setTourOpen(true)
+      }, 600)
+      return () => clearTimeout(timer)
+    }
+  }, [session])
+
+  const handleStartTour = useCallback(() => {
+    if (!session?.userId) return
+    resetTourRecord(session.userId)
+    setTourOpen(true)
+  }, [session])
 
   // Entitlements for students
   const loadSubscription = useCallback(() => {
@@ -279,6 +300,7 @@ function App() {
     return (
       <StudentComponent
         onNavigate={goTo}
+        onStartTour={handleStartTour}
         onSubscriptionChange={loadSubscription}
         session={session}
         subscription={subscription}
@@ -418,8 +440,19 @@ function App() {
               )}
             </div>
 
+            {session.role !== 'Admin' && session.role !== 'Agent' && (
+              <button
+                className="mt-2.5 flex min-h-9 w-full items-center gap-2 rounded-lg px-2 py-2 text-[13px] font-medium text-secondary-600 transition hover:bg-primary-50 hover:text-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                onClick={handleStartTour}
+                type="button"
+              >
+                <SparkleIcon className="h-4 w-4 text-primary-500" />
+                <span>Take Product Tour</span>
+              </button>
+            )}
+
             <button
-              className="mt-2 flex min-h-9 w-full items-center gap-2.5 rounded-lg px-2 py-2 text-[13px] font-medium text-secondary-500 transition hover:bg-secondary-50 hover:text-danger-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+              className="mt-1 flex min-h-9 w-full items-center gap-2.5 rounded-lg px-2 py-2 text-[13px] font-medium text-secondary-500 transition hover:bg-secondary-50 hover:text-danger-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
               onClick={handleLogout}
               type="button"
             >
@@ -436,6 +469,15 @@ function App() {
       <main className="p-4 sm:p-6 lg:p-8 xl:p-10">
         {renderActiveContent()}
       </main>
+
+      {tourOpen && session && session.role !== 'Admin' && session.role !== 'Agent' && (
+        <OnboardingTour
+          activePage={activePage}
+          onClose={() => setTourOpen(false)}
+          onNavigate={goTo}
+          session={session}
+        />
+      )}
     </div>
   )
 }

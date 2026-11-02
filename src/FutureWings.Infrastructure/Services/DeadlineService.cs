@@ -25,13 +25,23 @@ public sealed class DeadlineService(FutureWingsDbContext context) : IDeadlineSer
 
     public async Task<DeadlineDto> CreateAsync(int userId, DeadlineCreateDto request)
     {
+        if (request is null)
+        {
+            throw new ArgumentNullException(nameof(request));
+        }
+
+        if (!request.DueAt.HasValue || request.DueAt.Value == default || request.DueAt.Value.Year <= 1)
+        {
+            throw new ArgumentException("A valid due date and time is required.", nameof(request));
+        }
+
         var deadline = new DeadlineEntity
         {
             UserId = userId,
             Title = request.Title.Trim(),
             Category = request.Category.Trim(),
             Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
-            DueAt = request.DueAt,
+            DueAt = request.DueAt.Value,
             CreatedAt = DateTimeOffset.UtcNow
         };
 

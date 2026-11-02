@@ -17,8 +17,15 @@ public class DeadlineController(IDeadlineService deadlineService) : ControllerBa
     [HttpPost]
     public async Task<IActionResult> Create(DeadlineCreateDto request)
     {
-        var deadline = await deadlineService.CreateAsync(GetUserId(), request);
-        return CreatedAtAction(nameof(GetAll), new { id = deadline.Id }, deadline);
+        try
+        {
+            var deadline = await deadlineService.CreateAsync(GetUserId(), request);
+            return CreatedAtAction(nameof(GetAll), new { id = deadline.Id }, deadline);
+        }
+        catch (ArgumentException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
     }
 
     [HttpPatch("{deadlineId:int}/completion")]

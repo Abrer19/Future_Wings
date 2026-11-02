@@ -1,39 +1,78 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import SectionHeading from './SectionHeading.jsx'
-import { ChevronLeftIcon, ChevronRightIcon, StarFilledIcon } from './icons.jsx'
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  StarFilledIcon,
+  BadgeCheckIcon,
+  GraduationCapIcon,
+} from './icons.jsx'
+import { useScrollReveal } from '../../lib/useScrollAnimation.js'
 
 const stories = [
   {
     quote:
-      'FutureWings matched me with three Tier 1 universities I had never considered. The tier system made the whole search feel manageable instead of overwhelming.',
+      'FutureWings calibrated my tier matching perfectly. When other consultancies told me my GPA was too low for Canada, the platform identified two high-match programs at Toronto and UBC. The AI SOP review caught compliance issues that would have cost me my admission.',
     name: 'Amara Nwosu',
-    route: 'Nigeria → Canada',
+    route: 'Lagos, Nigeria → Toronto, Canada',
+    target: 'University of Toronto',
+    program: 'MSc Computer Science',
+    award: '$22,000 Fellowship',
+    initials: 'AN',
+    avatarBg: 'bg-primary-500 text-white',
     rating: 5,
   },
   {
     quote:
-      'I got a fully-funded scholarship in Munich thanks to the country-specific scholarship feature. Couldn’t have done it without this platform.',
+      'The country-specific scholarship radar found a DAAD stipend in Munich I never would have discovered on standard university portals. Plus, practicing the mock visa interview questions with the AI gave me complete confidence at the consulate window.',
     name: 'Daniel Osei',
-    route: 'Ghana → Germany',
+    route: 'Accra, Ghana → Munich, Germany',
+    target: 'Technical University of Munich',
+    program: 'M.Sc. Robotics & Systems',
+    award: 'DAAD Full Scholarship',
+    initials: 'DO',
+    avatarBg: 'bg-accent text-white',
     rating: 5,
   },
   {
     quote:
-      'The document verification step caught two problems with my transcripts before I submitted. That alone saved my application timeline.',
+      'Applying to 4 Australian universities used to feel like chaos with endless spreadsheets. The FutureWings application pipeline tracked every deadline and certified all my financial solvency documents. Got my COE and visa within 3 weeks of lodgment.',
     name: 'Priya Raman',
-    route: 'India → Australia',
+    route: 'Bangalore, India → Melbourne, Australia',
+    target: 'University of Melbourne',
+    program: 'Master of Data Science',
+    award: '50% Merit Grant',
+    initials: 'PR',
+    avatarBg: 'bg-secondary-800 text-white',
+    rating: 5,
+  },
+  {
+    quote:
+      'The visa readiness check pinpointed an exact discrepancy between my sponsor affidavit and my bank statements. Fixing that before lodging prevented what surely would have been a 214(b) rejection. Now studying in Boston with STEM OPT eligibility!',
+    name: 'Sofia Alvarez',
+    route: 'Bogotá, Colombia → Boston, USA',
+    target: 'Northeastern University',
+    program: 'MS Bioinformatics',
+    award: 'Graduate Dean Scholarship',
+    initials: 'SA',
+    avatarBg: 'bg-emerald-600 text-white',
     rating: 5,
   },
 ]
 
 export default function Testimonials() {
-  const [index, setIndex] = useState(1)
-  const story = stories[index]
+  const [index, setIndex] = useState(0)
+  const containerRef = useRef(null)
 
+  useScrollReveal(containerRef, {
+    direction: 'up',
+    distance: 24,
+    duration: 0.8,
+  })
+
+  const story = stories[index]
   const go = (next) => setIndex((next + stories.length) % stories.length)
 
-  // Left/right arrows move between slides when focus is inside the carousel,
-  // which is the behaviour keyboard users expect from a rotating region.
   const onKeyDown = (event) => {
     if (event.key === 'ArrowLeft') {
       event.preventDefault()
@@ -48,73 +87,115 @@ export default function Testimonials() {
   return (
     <section
       aria-labelledby="testimonials-title"
-      className="bg-surface py-20 sm:py-24"
+      className="relative bg-surface py-20 sm:py-28 overflow-hidden"
       id="testimonials"
     >
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <SectionHeading
-          badge="Testimonials"
-          badgeClassName="bg-secondary-500/10 text-secondary-500"
-          description="Real outcomes from students who planned their move with FutureWings."
+          badge="Social Proof"
+          badgeClassName="bg-primary-50 text-primary-700 border border-primary-200/80"
+          description="Hear from international students who unlocked dream admissions, scholarships, and visa grants."
           id="testimonials-title"
-          title="Student Stories"
+          title="Proven outcomes across the globe"
         />
 
         <div
           aria-roledescription="carousel"
-          className="mx-auto mt-12 max-w-2xl"
+          className="mx-auto mt-14 max-w-4xl"
           onKeyDown={onKeyDown}
+          ref={containerRef}
           role="group"
         >
-          <div className="flex items-center gap-3">
-            <button
-              aria-label="Previous story"
-              className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-full border border-secondary-500/15 bg-white text-secondary-500 transition hover:border-primary-500/40 hover:text-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 sm:flex"
-              onClick={() => go(index - 1)}
-              type="button"
-            >
-              <ChevronLeftIcon />
-            </button>
+          {/* Main Card with Navigation Controls */}
+          <div className="relative">
+            <div className="relative overflow-hidden rounded-3xl border border-secondary-200/80 bg-white p-8 sm:p-12 shadow-sm transition-all">
+              {/* Top Row: Stars + Verified Badge + Carousel Nav */}
+              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-secondary-100 pb-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center text-amber-400">
+                    <span className="sr-only">{story.rating} out of 5 stars</span>
+                    {Array.from({ length: story.rating }, (_, i) => (
+                      <StarFilledIcon key={i} className="h-4 w-4" />
+                    ))}
+                  </div>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">
+                    <BadgeCheckIcon className="h-3.5 w-3.5" />
+                    <span>Verified Admission</span>
+                  </span>
+                </div>
 
-            <blockquote
-              aria-live="polite"
-              className="flex-1 rounded-2xl border border-secondary-500/10 bg-white px-6 py-8 text-center shadow-sm sm:px-10"
-            >
-              <p className="flex items-center justify-center gap-1 text-warning">
-                <span className="sr-only">{story.rating} out of 5 stars</span>
-                {Array.from({ length: story.rating }, (_, star) => (
-                  <StarFilledIcon key={star} />
-                ))}
-              </p>
-              <p className="mt-5 text-sm italic leading-7 text-secondary-950 sm:text-base">
-                &ldquo;{story.quote}&rdquo;
-              </p>
-              <footer className="mt-6">
-                <p className="text-sm font-bold text-secondary-950">{story.name}</p>
-                <p className="mt-1 text-xs text-secondary-500">{story.route}</p>
-              </footer>
-            </blockquote>
+                <div className="flex items-center gap-2">
+                  <button
+                    aria-label="Previous story"
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-secondary-200 bg-white text-secondary-600 transition-colors hover:border-primary-500 hover:text-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                    onClick={() => go(index - 1)}
+                    type="button"
+                  >
+                    <ChevronLeftIcon className="h-4 w-4" />
+                  </button>
+                  <span className="text-xs font-semibold text-secondary-400 px-1">
+                    {index + 1} / {stories.length}
+                  </span>
+                  <button
+                    aria-label="Next story"
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-secondary-200 bg-white text-secondary-600 transition-colors hover:border-primary-500 hover:text-primary-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                    onClick={() => go(index + 1)}
+                    type="button"
+                  >
+                    <ChevronRightIcon className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
 
-            <button
-              aria-label="Next story"
-              className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-full border border-secondary-500/15 bg-white text-secondary-500 transition hover:border-primary-500/40 hover:text-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 sm:flex"
-              onClick={() => go(index + 1)}
-              type="button"
-            >
-              <ChevronRightIcon />
-            </button>
+              {/* Quote Body */}
+              <blockquote aria-live="polite" className="mt-8">
+                <p className="text-base sm:text-lg leading-relaxed text-secondary-800 font-medium">
+                  &ldquo;{story.quote}&rdquo;
+                </p>
+
+                {/* Student Profile footer */}
+                <footer className="mt-8 flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-secondary-100">
+                  <div className="flex items-center gap-3.5">
+                    <div
+                      className={`flex h-12 w-12 items-center justify-center rounded-2xl font-bold text-sm shadow-xs ${story.avatarBg}`}
+                    >
+                      {story.initials}
+                    </div>
+                    <div>
+                      <p className="font-bold text-secondary-950 text-sm sm:text-base">
+                        {story.name}
+                      </p>
+                      <p className="text-xs text-secondary-500 font-medium">{story.route}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:items-end">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-secondary-900">
+                      <GraduationCapIcon className="h-4 w-4 text-primary-500" />
+                      <span>
+                        {story.target} • {story.program}
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-semibold text-primary-600">
+                      Awarded: {story.award}
+                    </span>
+                  </div>
+                </footer>
+              </blockquote>
+            </div>
           </div>
 
-          <div className="mt-6 flex items-center justify-center gap-2">
+          {/* Dot navigation */}
+          <div className="mt-8 flex items-center justify-center gap-2">
             {stories.map((item, dot) => (
               <button
                 aria-current={dot === index ? 'true' : undefined}
-                aria-label={`Show story ${dot + 1} of ${stories.length}`}
-                className={
+                aria-label={`Show story from ${item.name}`}
+                className={`transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
                   dot === index
-                    ? 'h-2 w-6 rounded-full bg-primary-500 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2'
-                    : 'h-2 w-2 rounded-full bg-secondary-500/25 transition hover:bg-secondary-500/45 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2'
-                }
+                    ? 'h-2 w-8 rounded-full bg-primary-500'
+                    : 'h-2 w-2 rounded-full bg-secondary-300 hover:bg-secondary-400'
+                }`}
                 key={item.name}
                 onClick={() => setIndex(dot)}
                 type="button"

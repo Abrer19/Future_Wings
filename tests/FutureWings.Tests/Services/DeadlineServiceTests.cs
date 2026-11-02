@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using FutureWings.Application.DTOs.Deadline;
 using FutureWings.Infrastructure.Services;
 
@@ -28,6 +29,115 @@ public class DeadlineServiceTests
 
         var list = await service.GetAllAsync(1);
         Assert.Single(list);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithNullDueAt_ThrowsArgumentException()
+    {
+        using var context = TestDbContextFactory.Create();
+        var service = new DeadlineService(context);
+
+        var request = new DeadlineCreateDto
+        {
+            Title = "Missing Due Date",
+            Category = "Application",
+            DueAt = null
+        };
+
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(1, request));
+        Assert.Contains("valid due date", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithDefaultDueAt_ThrowsArgumentException()
+    {
+        using var context = TestDbContextFactory.Create();
+        var service = new DeadlineService(context);
+
+        var request = new DeadlineCreateDto
+        {
+            Title = "Default Due Date",
+            Category = "Application",
+            DueAt = default(DateTimeOffset)
+        };
+
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(1, request));
+        Assert.Contains("valid due date", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithYear0001DueAt_ThrowsArgumentException()
+    {
+        using var context = TestDbContextFactory.Create();
+        var service = new DeadlineService(context);
+
+        var request = new DeadlineCreateDto
+        {
+            Title = "Year 0001 Due Date",
+            Category = "Application",
+            DueAt = new DateTimeOffset(1, 1, 1, 0, 0, 0, TimeSpan.Zero)
+        };
+
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(1, request));
+        Assert.Contains("valid due date", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithValidUtcDueAt_PersistsExactInstant()
+    {
+        using var context = TestDbContextFactory.Create();
+        var service = new DeadlineService(context);
+        var expectedDue = new DateTimeOffset(2026, 12, 1, 14, 0, 0, TimeSpan.Zero);
+
+        var request = new DeadlineCreateDto
+        {
+            Title = "UTC Deadline",
+            Category = "Exam",
+            DueAt = expectedDue
+        };
+
+        var created = await service.CreateAsync(1, request);
+        Assert.NotNull(created);
+        Assert.Equal(expectedDue.ToUniversalTime(), created.DueAt.ToUniversalTime());
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithValidOffsetDueAt_PersistsAndPreservesInstant()
+    {
+        using var context = TestDbContextFactory.Create();
+        var service = new DeadlineService(context);
+        var offset = TimeSpan.FromHours(6);
+        var expectedDue = new DateTimeOffset(2026, 12, 1, 20, 0, 0, offset);
+
+        var request = new DeadlineCreateDto
+        {
+            Title = "Offset Deadline",
+            Category = "Exam",
+            DueAt = expectedDue
+        };
+
+        var created = await service.CreateAsync(1, request);
+        Assert.NotNull(created);
+        Assert.Equal(expectedDue.ToUniversalTime(), created.DueAt.ToUniversalTime());
+        Assert.Equal(offset, created.DueAt.Offset);
+    }
+
+    [Fact]
+    public void DeadlineCreateDto_Validation_RejectsYear0001()
+    {
+        var dto = new DeadlineCreateDto
+        {
+            Title = "Year 0001 Task",
+            Category = "General",
+            DueAt = new DateTimeOffset(1, 1, 1, 0, 0, 0, TimeSpan.Zero)
+        };
+
+        var context = new ValidationContext(dto);
+        var results = new List<ValidationResult>();
+        var isValid = Validator.TryValidateObject(dto, context, results, validateAllProperties: true);
+
+        Assert.False(isValid);
+        Assert.Contains(results, r => r.ErrorMessage != null && r.ErrorMessage.Contains("valid due date"));
     }
 
     [Fact]
