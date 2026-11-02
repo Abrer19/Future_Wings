@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { apiRequest } from '../auth.js'
 import Toast from '../components/ui/Toast.jsx'
-import { BTN_PRIMARY, CARD, CONTROL, FOCUS } from '../components/ui/styles.js'
+import { CONTROL, FOCUS } from '../components/ui/styles.js'
 
 const steps = [
   { title: 'Study Plan', hint: 'Country & Major' },
@@ -93,6 +93,10 @@ export default function VisaCheck({ session }) {
 
   const evaluate = async (event) => {
     event.preventDefault()
+    if (step === 0 && !form.destinationCountry?.trim()) {
+      setError('Please provide a destination country.')
+      return
+    }
     if (step < steps.length - 1) { setStep(step + 1); return }
     setLoading(true); setError('')
     const payload = {
@@ -199,7 +203,7 @@ export default function VisaCheck({ session }) {
               </Field>
               {form.applicationId && (
                 <button className={`text-xs font-bold text-primary-600 hover:underline ${FOCUS}`} disabled={loading} onClick={checkApplication} type="button">
-                  Load report from saved application details &rarr;
+                  Load report from saved application details <span aria-hidden="true">→</span>
                 </button>
               )}
               <Field label="Destination Country" id="visa-country">
@@ -263,11 +267,19 @@ export default function VisaCheck({ session }) {
               Previous Step
             </button>
             <button
-              className="rounded-2xl bg-primary-500 hover:bg-primary-600 px-6 py-2.5 text-xs font-extrabold text-white shadow-md shadow-primary-500/25 transition disabled:opacity-50"
+              className={`rounded-2xl bg-primary-500 hover:bg-primary-600 px-6 py-2.5 text-xs font-extrabold text-white shadow-md shadow-primary-500/25 transition disabled:opacity-50 ${FOCUS}`}
               disabled={loading}
               type="submit"
             >
-              {loading ? 'Evaluating…' : step === steps.length - 1 ? 'Calculate Visa Readiness' : 'Continue &rarr;'}
+              {loading ? (
+                'Evaluating…'
+              ) : step === steps.length - 1 ? (
+                'Calculate Visa Readiness'
+              ) : (
+                <>
+                  Continue <span aria-hidden="true">→</span>
+                </>
+              )}
             </button>
           </div>
         </form>
@@ -277,9 +289,21 @@ export default function VisaCheck({ session }) {
           <div className="flex items-center justify-between border-b border-secondary-100 pb-3">
             <h2 className="text-base font-extrabold text-secondary-950">Readiness Risk Analysis</h2>
             {result && (
-              <span className={`rounded-lg px-2.5 py-0.5 text-xs font-black uppercase ${currentMeter.bg} ${currentMeter.text}`}>
-                {currentMeter.label}
-              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  className={`rounded-lg border border-secondary-200 px-2.5 py-1 text-xs font-bold text-secondary-600 hover:bg-secondary-50 transition ${FOCUS}`}
+                  onClick={() => {
+                    setResult(null)
+                    setStep(0)
+                  }}
+                  type="button"
+                >
+                  Start Over
+                </button>
+                <span className={`rounded-lg px-2.5 py-0.5 text-xs font-black uppercase ${currentMeter.bg} ${currentMeter.text}`}>
+                  {currentMeter.label}
+                </span>
+              </div>
             )}
           </div>
 
@@ -337,7 +361,7 @@ export default function VisaCheck({ session }) {
                 <ul className="mt-2.5 space-y-2">
                   {result.recommendations.map((item) => (
                     <li className="flex items-start gap-2 text-xs text-secondary-700 bg-primary-50/50 border border-primary-200/60 rounded-xl p-2.5" key={item}>
-                      <span className="text-primary-600 font-bold mt-0.5">&rarr;</span>
+                      <span aria-hidden="true" className="text-primary-600 font-bold mt-0.5">→</span>
                       <span>{item}</span>
                     </li>
                   ))}

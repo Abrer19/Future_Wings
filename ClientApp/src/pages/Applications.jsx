@@ -230,7 +230,7 @@ export default function Applications({ session, onNavigate }) {
                 className="rounded-xl border border-primary-200 bg-primary-50 px-3.5 py-1.5 text-xs font-bold text-primary-700 hover:bg-primary-100 transition"
                 onClick={() => onNavigate('Discovery')}
               >
-                Find More Programs &rarr;
+                Find More Programs <span aria-hidden="true">→</span>
               </button>
             )}
           </div>

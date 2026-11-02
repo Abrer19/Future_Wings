@@ -20,6 +20,13 @@ public sealed class RecommendationService(FutureWingsDbContext context) : IRecom
             .ToListAsync();
         var savedProgramIds = savedProgramList.ToHashSet();
 
+        var trackedProgramList = await context.Applications
+            .AsNoTracking()
+            .Where(app => app.UserId == userId)
+            .Select(app => new { app.ProgramId, app.Id })
+            .ToListAsync();
+        var trackedProgramIds = trackedProgramList.ToDictionary(a => a.ProgramId, a => a.Id);
+
         var programs = await context.Programs
             .AsNoTracking()
             .Include(p => p.University)
@@ -51,7 +58,9 @@ public sealed class RecommendationService(FutureWingsDbContext context) : IRecom
                 Tags = tags,
                 MatchScore = Math.Round(score, 1),
                 Reason = reason,
-                IsSaved = savedProgramIds.Contains(program.Id)
+                IsSaved = savedProgramIds.Contains(program.Id),
+                IsTracked = trackedProgramIds.ContainsKey(program.Id),
+                ApplicationId = trackedProgramIds.TryGetValue(program.Id, out var appId) ? appId : null
             });
         }
 

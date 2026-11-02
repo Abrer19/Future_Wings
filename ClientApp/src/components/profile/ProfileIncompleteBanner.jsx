@@ -49,7 +49,7 @@ export default function ProfileIncompleteBanner({
         type="button"
         data-testid="banner-complete-profile-btn"
       >
-        Complete Profile &rarr;
+        Complete Profile <span aria-hidden="true">→</span>
       </button>
     </div>
   )

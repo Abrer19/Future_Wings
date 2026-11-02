@@ -91,7 +91,7 @@ export default function Features() {
                 </p>
               </div>
               <div className="mt-6 pt-4 border-t border-secondary-100/80 flex items-center text-xs font-bold text-primary-600 group-hover:translate-x-1 transition">
-                <span>Learn more &rarr;</span>
+                <span>Learn more <span aria-hidden="true">→</span></span>
               </div>
             </li>
           ))}

@@ -14,4 +14,11 @@ describe('Toast component', () => {
     render(<Toast message="Profile updated successfully!" />)
     expect(screen.getByText('Profile updated successfully!')).toBeInTheDocument()
   })
+
+  it('renders optional action button when actionLabel and onAction are passed', () => {
+    const onAction = () => {}
+    render(<Toast message="Added to Application Tracker" actionLabel="View Tracker" onAction={onAction} />)
+    expect(screen.getByText('Added to Application Tracker')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'View Tracker' })).toBeInTheDocument()
+  })
 })

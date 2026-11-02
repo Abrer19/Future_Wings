@@ -251,7 +251,7 @@ export default function Roadmap({ session, onNavigate }) {
             type="button"
             data-testid="roadmap-go-to-profile-btn"
           >
-            Complete Profile &rarr;
+            Complete Profile <span aria-hidden="true">→</span>
           </button>
         </div>
       )}

@@ -137,7 +137,7 @@ export default function ProfileCompletionPrompt({
             type="button"
             data-testid="profile-prompt-complete-btn"
           >
-            Complete Profile Now &rarr;
+            Complete Profile Now <span aria-hidden="true">→</span>
           </button>
         </div>
       </div>

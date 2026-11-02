@@ -23,12 +23,14 @@ import VisaCheck from './pages/VisaCheck.jsx'
 import OnboardingTour from './components/onboarding/OnboardingTour.jsx'
 import ProfileCompletionPrompt from './components/profile/ProfileCompletionPrompt.jsx'
 import ProfileIncompleteBanner from './components/profile/ProfileIncompleteBanner.jsx'
+import NotificationBell from './components/notifications/NotificationBell.jsx'
 import { isTourEligible, resetTourRecord } from './lib/onboardingStorage.js'
 import {
   evaluateProfileCompletion,
   isProfilePromptDismissed,
   dismissProfilePrompt,
 } from './lib/profileCompletion.js'
+import { clearReturnTo, getReturnTo } from './lib/navigationStorage.js'
 import { SparkleIcon } from './components/home/icons.jsx'
 
 const studentPages = {
@@ -133,6 +135,7 @@ function App() {
   const [profileLoading, setProfileLoading] = useState(false)
   const [promptDismissed, setPromptDismissed] = useState(false)
   const [tourOpen, setTourOpen] = useState(false)
+  const [returnTo, setReturnToState] = useState(getReturnTo)
   const [appToast, setAppToast] = useState('')
   const menuButtonRef = useRef(null)
 
@@ -252,7 +255,15 @@ function App() {
   const handleAuthenticated = (nextSession) => {
     saveSession(nextSession)
     setSession(nextSession)
-    setActivePage(getDefaultPage(nextSession.role))
+    const pendingDestination = returnTo || getReturnTo()
+    clearReturnTo()
+    setReturnToState(null)
+    const defaultPage = getDefaultPage(nextSession.role)
+    const target =
+      pendingDestination && (nextSession.role === 'Student' || nextSession.role === 'Agent')
+        ? pendingDestination
+        : defaultPage
+    goTo(target)
     if (nextSession?.userId) {
       setPromptDismissed(isProfilePromptDismissed(nextSession.userId))
     }
@@ -296,21 +307,51 @@ function App() {
     setAppToast('Your profile is incomplete. Recommendations, scholarship matching, and the roadmap may not work correctly until you complete it.')
   }
 
-  if (!session) {
-    if (activePage !== 'Login' && activePage !== 'Register') {
-      return (
-        <Home
-          onExploreCountries={() => setActivePage('Register')}
-          onGetRecommendations={() => setActivePage('Register')}
-          onSignIn={() => setActivePage('Login')}
-          onSignUp={() => setActivePage('Register')}
-          onViewDestination={() => setActivePage('Register')}
-        />
-      )
+  const handleHomeNavigate = (page) => {
+    if (!session && (page === 'Scholarships' || page === 'Community')) {
+      setReturnToState(page)
+      goTo('Login')
+    } else {
+      goTo(page)
     }
+  }
 
+  if (activePage === 'Home' || (!session && activePage !== 'Login' && activePage !== 'Register')) {
+    return (
+      <Home
+        isAuthenticated={Boolean(session)}
+        onExploreCountries={() => goTo(session ? 'Discovery' : 'Register')}
+        onGetRecommendations={() => goTo(session ? 'Recommendations' : 'Register')}
+        onNavigate={handleHomeNavigate}
+        onSignIn={() => goTo('Login')}
+        onSignUp={() => goTo('Register')}
+        onViewDestination={() => goTo(session ? 'Discovery' : 'Register')}
+        session={session}
+      />
+    )
+  }
+
+  if (!session) {
     const AuthPage = activePage === 'Register' ? Register : Login
-    return <AuthPage onAuthenticated={handleAuthenticated} onNavigate={() => setActivePage(activePage === 'Register' ? 'Login' : 'Register')} />
+    return (
+      <AuthPage
+        onAuthenticated={handleAuthenticated}
+        onNavigate={(page) => {
+          if (page === 'Home') {
+            goTo('Home')
+          } else if (page === 'Login' || page === 'Register') {
+            goTo(page)
+          } else {
+            goTo(activePage === 'Register' ? 'Login' : 'Register')
+          }
+        }}
+        onBackToHome={() => {
+          clearReturnTo()
+          setReturnToState(null)
+          goTo('Home')
+        }}
+      />
+    )
   }
 
   const role = session.role === 'Admin' || session.role === 'Agent' ? session.role : 'Student'
@@ -416,19 +457,22 @@ function App() {
               </p>
             </div>
           </div>
-          <button
-            aria-controls="workspace-nav"
-            aria-expanded={menuOpen}
-            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-secondary-500 transition hover:bg-secondary-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 lg:hidden"
-            onClick={() => setMenuOpen((open) => !open)}
-            ref={menuButtonRef}
-            type="button"
-          >
-            <svg aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.75" viewBox="0 0 24 24">
-              {menuOpen ? <path d="M6 6l12 12M18 6 6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
-            </svg>
-          </button>
+          <div className="flex items-center gap-1.5">
+            <NotificationBell onNavigate={goTo} session={session} />
+            <button
+              aria-controls="workspace-nav"
+              aria-expanded={menuOpen}
+              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-secondary-500 transition hover:bg-secondary-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 lg:hidden"
+              onClick={() => setMenuOpen((open) => !open)}
+              ref={menuButtonRef}
+              type="button"
+            >
+              <svg aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.75" viewBox="0 0 24 24">
+                {menuOpen ? <path d="M6 6l12 12M18 6 6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+              </svg>
+            </button>
+          </div>
         </div>
 
         <div className={`${menuOpen ? 'block' : 'hidden'} lg:flex lg:min-h-0 lg:flex-1 lg:flex-col`} id="workspace-nav">

@@ -23,6 +23,7 @@ import { useInterFont } from '../components/home/useInterFont.js'
  * - onGetRecommendations: Navigates to Recommendations intake or Registration
  * - onExploreCountries: Navigates to Country Discovery or Registration
  * - onViewDestination: Navigates to filtered university list for destination
+ * - onNavigate: Navigates to any target page
  */
 export default function Home({
   onSignIn,
@@ -30,8 +31,16 @@ export default function Home({
   onGetRecommendations,
   onExploreCountries,
   onViewDestination,
+  onNavigate,
+  session,
+  isAuthenticated = false,
 }) {
   useInterFont()
+
+  const handleNavigate = onNavigate ?? ((page) => {
+    if (page === 'Login') onSignIn?.()
+    else if (page === 'Register') onSignUp?.()
+  })
 
   return (
     <div className="min-h-screen bg-surface text-secondary-950 font-sans selection:bg-primary-500 selection:text-white overflow-x-hidden">
@@ -44,7 +53,13 @@ export default function Home({
       </a>
 
       {/* Sticky Header */}
-      <SiteHeader onSignIn={onSignIn} onSignUp={onSignUp} />
+      <SiteHeader
+        isAuthenticated={isAuthenticated}
+        onNavigate={handleNavigate}
+        onSignIn={onSignIn}
+        onSignUp={onSignUp}
+        session={session}
+      />
 
       <main id="main">
         {/* Section 3: Hero Section */}

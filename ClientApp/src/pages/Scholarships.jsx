@@ -273,7 +273,7 @@ export default function Scholarships({ session, onNavigate }) {
               type="button"
               data-testid="scholarships-complete-profile-btn"
             >
-              Complete Profile &rarr;
+              Complete Profile <span aria-hidden="true">→</span>
             </button>
           )}
         </div>

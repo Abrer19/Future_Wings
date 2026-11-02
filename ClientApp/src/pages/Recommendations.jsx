@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { apiRequest } from '../auth.js'
+import Toast from '../components/ui/Toast.jsx'
 import { BTN_PRIMARY, CARD, FOCUS } from '../components/ui/styles.js'
 import { evaluateProfileCompletion } from '../lib/profileCompletion.js'
 
@@ -17,18 +18,25 @@ export default function Recommendations({ session, onNavigate }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [savingIds, setSavingIds] = useState(() => new Set())
+  const [trackedProgramIds, setTrackedProgramIds] = useState(() => new Set())
+  const [trackingIds, setTrackingIds] = useState(() => new Set())
+  const [toastMessage, setToastMessage] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
 
   const loadData = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
-      const [profileData, recs] = await Promise.all([
+      const [profileData, recs, tracked] = await Promise.all([
         apiRequest('/profile', { token: session.token }),
         apiRequest('/recommendation', { token: session.token }),
+        apiRequest('/applications', { token: session.token }).catch(() => []),
       ])
       setProfile(profileData)
-      setRecommendations(recs)
+      setRecommendations(recs ?? [])
+      if (Array.isArray(tracked)) {
+        setTrackedProgramIds(new Set(tracked.map((app) => app.programId)))
+      }
     } catch (requestError) {
       setError(requestError.message)
     } finally {
@@ -40,6 +48,47 @@ export default function Recommendations({ session, onNavigate }) {
     const timer = setTimeout(loadData, 0)
     return () => clearTimeout(timer)
   }, [loadData, refreshKey])
+
+  useEffect(() => {
+    if (!toastMessage) return undefined
+    const timer = window.setTimeout(() => setToastMessage(''), 3500)
+    return () => window.clearTimeout(timer)
+  }, [toastMessage])
+
+  const isProgramTracked = (programId) => {
+    return trackedProgramIds.has(programId) || Boolean(recommendations.find((p) => p.programId === programId)?.isTracked)
+  }
+
+  const trackProgram = async (item) => {
+    if (!item?.programId || isProgramTracked(item.programId) || trackingIds.has(item.programId)) return
+    setTrackingIds((current) => new Set(current).add(item.programId))
+    try {
+      await apiRequest('/applications', {
+        token: session.token,
+        method: 'POST',
+        body: JSON.stringify({ programId: item.programId }),
+      })
+      setTrackedProgramIds((current) => new Set(current).add(item.programId))
+      setRecommendations((current) => current.map((rec) =>
+        rec.programId === item.programId ? { ...rec, isTracked: true } : rec))
+      setToastMessage('Added to Application Tracker')
+    } catch (requestError) {
+      if (requestError.message?.includes('already tracking')) {
+        setTrackedProgramIds((current) => new Set(current).add(item.programId))
+        setRecommendations((current) => current.map((rec) =>
+          rec.programId === item.programId ? { ...rec, isTracked: true } : rec))
+        setToastMessage('This program is already in your Application Tracker.')
+      } else {
+        setToastMessage(requestError.message || 'Failed to add to Application Tracker.')
+      }
+    } finally {
+      setTrackingIds((current) => {
+        const next = new Set(current)
+        next.delete(item.programId)
+        return next
+      })
+    }
+  }
 
   const toggleSaved = async (recommendation) => {
     if (savingIds.has(recommendation.programId)) return
@@ -112,7 +161,7 @@ export default function Recommendations({ session, onNavigate }) {
               type="button"
               data-testid="recommendations-go-to-profile-btn"
             >
-              Complete Profile Now &rarr;
+              Complete Profile Now <span aria-hidden="true">→</span>
             </button>
           </div>
         </section>
@@ -240,33 +289,80 @@ export default function Recommendations({ session, onNavigate }) {
                   </div>
                 </div>
 
-                <div className="mt-6 border-t border-secondary-100 pt-4 flex items-center justify-between">
+                <div className="mt-6 border-t border-secondary-100 pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="space-y-0.5">
                     <p className="text-xs text-secondary-400">Annual Tuition</p>
                     <p className="text-base font-black text-secondary-950">
                       {formatTuition(item.annualTuitionUsd)}
                     </p>
-                    <p className="text-[11px] text-secondary-500">{formatDuration(item.durationMonths)}</p>
+                    <p className="text-[11px] text-secondary-500">{formatDuration(item.durationMonths)} · {item.level}</p>
                   </div>
 
-                  <button
-                    className={`rounded-xl border px-4 py-2 text-xs font-bold transition ${FOCUS} ${
-                      item.isSaved
-                        ? 'border-primary-500 bg-primary-50 text-primary-700 hover:bg-primary-100'
-                        : 'border-secondary-200 bg-white text-secondary-700 hover:bg-secondary-50'
-                    }`}
-                    disabled={savingIds.has(item.programId)}
-                    onClick={() => toggleSaved(item)}
-                    type="button"
-                  >
-                    {item.isSaved ? 'Saved ✓' : 'Save to Shortlist'}
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition ${FOCUS} ${
+                        item.isSaved
+                          ? 'border-primary-500 bg-primary-50 text-primary-700 hover:bg-primary-100'
+                          : 'border-secondary-200 bg-white text-secondary-700 hover:bg-secondary-50'
+                      }`}
+                      disabled={savingIds.has(item.programId)}
+                      onClick={() => toggleSaved(item)}
+                      type="button"
+                      data-testid={`save-program-btn-${item.programId}`}
+                    >
+                      {item.isSaved ? 'Saved ✓' : 'Save to Shortlist'}
+                    </button>
+
+                    {isProgramTracked(item.programId) ? (
+                      <button
+                        type="button"
+                        data-testid={`track-program-btn-${item.programId}`}
+                        onClick={() => onNavigate?.('Applications')}
+                        className={`inline-flex items-center gap-1.5 rounded-xl border border-success-200 bg-success-50 hover:bg-success-100 px-3.5 py-1.5 text-xs font-bold text-success-800 transition ${FOCUS}`}
+                        title="View in Application Tracker"
+                      >
+                        <span className="h-2 w-2 rounded-full bg-success-600" aria-hidden="true" />
+                        <span>In Application Tracker</span>
+                        <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        data-testid={`track-program-btn-${item.programId}`}
+                        disabled={trackingIds.has(item.programId)}
+                        onClick={() => trackProgram(item)}
+                        className={`inline-flex items-center gap-1.5 rounded-xl bg-primary-500 hover:bg-primary-600 px-3.5 py-1.5 text-xs font-extrabold text-white shadow-sm shadow-primary-500/20 transition disabled:opacity-60 ${FOCUS}`}
+                      >
+                        {trackingIds.has(item.programId) ? (
+                          <>
+                            <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" aria-hidden="true" />
+                            <span>Tracking…</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                              <path d="M12 4v16m8-8H4" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            <span>Add to Application Tracker</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </article>
             ))}
           </div>
         )}
       </section>
+
+      <Toast
+        message={toastMessage}
+        actionLabel={toastMessage.includes('Added') ? 'View Application Tracker' : undefined}
+        onAction={() => onNavigate?.('Applications')}
+      />
     </div>
   )
 }

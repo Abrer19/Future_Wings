@@ -126,6 +126,9 @@ public sealed class FutureWingsDbContext(DbContextOptions<FutureWingsDbContext> 
             entity.Property(program => program.Level).HasMaxLength(50);
             entity.Property(program => program.AnnualTuitionUsd).HasPrecision(12, 2);
             entity.Property(program => program.Tags).HasMaxLength(500);
+            entity.Property(program => program.Description).HasMaxLength(2000);
+            entity.Property(program => program.Requirements).HasMaxLength(2000);
+            entity.Property(program => program.OfficialLink).HasMaxLength(500);
 
             entity.HasMany(program => program.Applications)
                 .WithOne(application => application.Program)
@@ -215,7 +218,19 @@ public sealed class FutureWingsDbContext(DbContextOptions<FutureWingsDbContext> 
         });
         modelBuilder.Entity<VisaOutcome>().HasKey(outcome => outcome.Id);
         modelBuilder.Entity<Rating>().HasKey(rating => rating.Id);
-        modelBuilder.Entity<Notification>().HasKey(notification => notification.Id);
+        modelBuilder.Entity<Notification>(entity =>
+        {
+            entity.HasKey(notification => notification.Id);
+            entity.Property(notification => notification.Title).HasMaxLength(200);
+            entity.Property(notification => notification.Message).HasMaxLength(2000);
+            entity.Property(notification => notification.Type).HasMaxLength(50);
+            entity.Property(notification => notification.TargetPage).HasMaxLength(100);
+            entity.Property(notification => notification.TargetId).HasMaxLength(100);
+            entity.Property(notification => notification.EventKey).HasMaxLength(150);
+            entity.HasIndex(notification => new { notification.UserId, notification.IsRead });
+            entity.HasIndex(notification => new { notification.UserId, notification.CreatedAt });
+            entity.HasIndex(notification => new { notification.UserId, notification.EventKey });
+        });
         modelBuilder.Entity<Payment>(entity =>
         {
             entity.HasKey(payment => payment.Id);

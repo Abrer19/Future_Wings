@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { apiRequest } from '../auth.js'
 import { useAiSearch } from '../lib/useAiSearch.js'
+import ProgramDetailsModal from '../components/discovery/ProgramDetailsModal.jsx'
+import Toast from '../components/ui/Toast.jsx'
+import { FOCUS } from '../components/ui/styles.js'
 
-const emptyResult = { featuredCountries: [], programs: [], countries: [], levels: [], totalCount: 0 }
+const emptyResult = { featuredCountries: [], programs: [], countries: [], levels: [], studyTracks: [], totalCount: 0 }
 
 const formatTuition = (amount) => new Intl.NumberFormat('en-US', {
   style: 'currency', currency: 'USD', maximumFractionDigits: 0,
@@ -19,15 +22,20 @@ const AI_SUGGESTIONS = [
   'Low Tuition Public Universities',
 ]
 
-export default function Discovery({ session }) {
+export default function Discovery({ session, onNavigate }) {
   const [query, setQuery] = useState('')
   const [country, setCountry] = useState('')
   const [level, setLevel] = useState('')
+  const [track, setTrack] = useState('')
+  const [selectedProgram, setSelectedProgram] = useState(null)
   const [result, setResult] = useState(emptyResult)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [savingIds, setSavingIds] = useState(() => new Set())
   const [savedPrograms, setSavedPrograms] = useState([])
+  const [trackedProgramIds, setTrackedProgramIds] = useState(() => new Set())
+  const [trackingIds, setTrackingIds] = useState(() => new Set())
+  const [toastMessage, setToastMessage] = useState('')
   const [showComparison, setShowComparison] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
 
@@ -43,16 +51,17 @@ export default function Discovery({ session }) {
     if (query.trim()) params.set('query', query.trim())
     if (country) params.set('country', country)
     if (level) params.set('level', level)
+    if (track) params.set('track', track)
 
     try {
-      const data = await apiRequest(`/discovery?${params}`, { token: session.token, signal })
+      const data = await apiRequest(`/discovery?${params}`, { token: session?.token, signal })
       setResult(data)
     } catch (requestError) {
       if (requestError.name !== 'AbortError') setError(requestError.message)
     } finally {
       if (!signal.aborted) setLoading(false)
     }
-  }, [country, level, query, session.token])
+  }, [country, level, query, track, session?.token])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -62,11 +71,73 @@ export default function Discovery({ session }) {
 
   useEffect(() => {
     let active = true
-    apiRequest('/discovery/saved', { token: session.token })
+    apiRequest('/discovery/saved', { token: session?.token })
       .then((programs) => { if (active) setSavedPrograms(programs) })
       .catch((requestError) => { if (active) setError(requestError.message) })
     return () => { active = false }
-  }, [reloadKey, session.token])
+  }, [reloadKey, session?.token])
+
+  useEffect(() => {
+    let active = true
+    apiRequest('/applications', { token: session?.token })
+      .then((tracked) => {
+        if (!active || !Array.isArray(tracked)) return
+        setTrackedProgramIds(new Set(tracked.map((app) => app.programId)))
+      })
+      .catch(() => {})
+    return () => { active = false }
+  }, [reloadKey, session?.token])
+
+  useEffect(() => {
+    if (!toastMessage) return undefined
+    const timer = window.setTimeout(() => setToastMessage(''), 3500)
+    return () => window.clearTimeout(timer)
+  }, [toastMessage])
+
+  const isProgramTracked = (programId) => {
+    return trackedProgramIds.has(programId) || Boolean(result.programs.find((p) => p.id === programId)?.isTracked)
+  }
+
+  const trackProgram = async (program) => {
+    if (!program?.id || isProgramTracked(program.id) || trackingIds.has(program.id)) return
+    setTrackingIds((current) => new Set(current).add(program.id))
+    try {
+      await apiRequest('/applications', {
+        token: session.token,
+        method: 'POST',
+        body: JSON.stringify({ programId: program.id }),
+      })
+      setTrackedProgramIds((current) => new Set(current).add(program.id))
+      setResult((current) => ({
+        ...current,
+        programs: current.programs.map((item) => item.id === program.id ? { ...item, isTracked: true } : item),
+      }))
+      if (selectedProgram && selectedProgram.id === program.id) {
+        setSelectedProgram((prev) => prev ? { ...prev, isTracked: true } : prev)
+      }
+      setToastMessage('Added to Application Tracker')
+    } catch (requestError) {
+      if (requestError.message?.includes('already tracking')) {
+        setTrackedProgramIds((current) => new Set(current).add(program.id))
+        setResult((current) => ({
+          ...current,
+          programs: current.programs.map((item) => item.id === program.id ? { ...item, isTracked: true } : item),
+        }))
+        if (selectedProgram && selectedProgram.id === program.id) {
+          setSelectedProgram((prev) => prev ? { ...prev, isTracked: true } : prev)
+        }
+        setToastMessage('This program is already in your Application Tracker.')
+      } else {
+        setToastMessage(requestError.message || 'Failed to add to Application Tracker.')
+      }
+    } finally {
+      setTrackingIds((current) => {
+        const next = new Set(current)
+        next.delete(program.id)
+        return next
+      })
+    }
+  }
 
   const toggleSaved = async (program) => {
     if (savingIds.has(program.id)) return
@@ -79,6 +150,7 @@ export default function Discovery({ session }) {
     setSavedPrograms((current) => nextSaved
       ? [...current.filter((item) => item.id !== program.id), { ...program, isSaved: true }]
       : current.filter((item) => item.id !== program.id))
+    setSelectedProgram((current) => (current && current.id === program.id ? { ...current, isSaved: nextSaved } : current))
 
     try {
       await apiRequest(`/discovery/saved/${program.id}`, {
@@ -93,6 +165,7 @@ export default function Discovery({ session }) {
       setSavedPrograms((current) => program.isSaved
         ? [...current.filter((item) => item.id !== program.id), program]
         : current.filter((item) => item.id !== program.id))
+      setSelectedProgram((current) => (current && current.id === program.id ? { ...current, isSaved: program.isSaved } : current))
       setError(requestError.message)
     } finally {
       setSavingIds((current) => {
@@ -103,7 +176,12 @@ export default function Discovery({ session }) {
     }
   }
 
-  const clearFilters = () => { setQuery(''); setCountry(''); setLevel('') }
+  const clearFilters = () => {
+    setQuery('')
+    setCountry('')
+    setLevel('')
+    setTrack('')
+  }
 
   const runAiSearch = async (event) => {
     if (event) event.preventDefault()
@@ -203,7 +281,7 @@ export default function Discovery({ session }) {
         </div>
 
         <p className="text-xs text-secondary-500">
-          Describe what you are looking for in your own words &mdash; our on-device NLP model ranks all programs by semantic fit.
+          Describe what you are looking for in your own words — our on-device NLP model ranks all programs by semantic fit.
         </p>
 
         <form className="mt-4 flex flex-col gap-2.5 sm:flex-row" onSubmit={runAiSearch}>
@@ -261,23 +339,71 @@ export default function Discovery({ session }) {
         )}
       </section>
 
-      {/* Featured Destination Filters */}
-      <section aria-labelledby="destinations-title">
-        <div className="mb-4 flex items-end justify-between gap-4">
+      {/* Featured Study Tracks & Destinations */}
+      <section aria-labelledby="destinations-title" className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-primary-600">Featured Study Tracks</p>
-            <h2 className="mt-0.5 text-xl font-bold text-secondary-950" id="destinations-title">Filter by Destination</h2>
+            <p className="text-xs font-bold uppercase tracking-wider text-primary-600">Featured Study Tracks & Destinations</p>
+            <h2 className="mt-0.5 text-xl font-bold text-secondary-950" id="destinations-title">Explore Tracks & Top Destinations</h2>
+            <p className="mt-1 text-xs text-secondary-500">
+              Quickly filter programs by discipline or country. Selecting a track syncs directly with the study track filter.
+            </p>
           </div>
-          {country && (
+          {(track || country) && (
             <button
-              className="text-xs font-bold text-primary-600 hover:underline"
-              onClick={() => setCountry('')}
+              className="text-xs font-bold text-primary-600 hover:underline self-start sm:self-auto"
+              onClick={() => { setTrack(''); setCountry('') }}
               type="button"
             >
-              Show all countries
+              Reset track & destination
             </button>
           )}
         </div>
+
+        {/* Featured Study Track Chips (Quick Selection connected to dropdown) */}
+        {result.studyTracks && result.studyTracks.length > 0 && (
+          <div className="rounded-2xl border border-secondary-200/80 bg-white p-4 shadow-sm">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <span className="text-xs font-bold text-secondary-800">
+                Featured Catalog Tracks
+              </span>
+              {track && (
+                <span className="text-[11px] font-semibold text-primary-600">
+                  Filtered by: <strong>{track}</strong>
+                </span>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2" data-testid="featured-track-chips">
+              <button
+                type="button"
+                onClick={() => setTrack('')}
+                className={`rounded-full px-3 py-1 text-xs font-semibold border transition ${
+                  !track
+                    ? 'border-primary-500 bg-primary-500 text-white shadow-sm'
+                    : 'border-secondary-200 bg-secondary-50 text-secondary-700 hover:border-primary-300 hover:text-primary-700'
+                }`}
+              >
+                All tracks
+              </button>
+              {result.studyTracks.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  data-testid={`track-chip-${t}`}
+                  onClick={() => setTrack(track === t ? '' : t)}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold border transition ${
+                    track === t
+                      ? 'border-primary-500 bg-primary-500 text-white shadow-sm'
+                      : 'border-secondary-200 bg-white text-secondary-700 hover:border-primary-300 hover:text-primary-700'
+                  }`}
+                  aria-pressed={track === t}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {result.featuredCountries.map((item) => (
@@ -295,7 +421,7 @@ export default function Discovery({ session }) {
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-50 border border-primary-200 text-sm font-black text-primary-600">
                   {item.code}
                 </div>
-                <span className="text-xs font-bold text-secondary-400 group-hover:text-primary-600 transition">&rarr;</span>
+                <span aria-hidden="true" className="text-xs font-bold text-secondary-400 group-hover:text-primary-600 transition">→</span>
               </div>
               <h3 className="mt-4 font-bold text-secondary-950 text-base group-hover:text-primary-600 transition">{item.name}</h3>
               <p className="mt-1 text-xs text-secondary-500 leading-relaxed">{item.description}</p>
@@ -307,7 +433,7 @@ export default function Discovery({ session }) {
 
       {/* Program Results List */}
       <section aria-labelledby="programs-title">
-        <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+        <div className="mb-4 flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div>
             <p className="text-xs font-bold uppercase tracking-wider text-primary-600">
               {aiMatches ? 'Contextual Matches' : 'Available Degree Programs'}
@@ -321,27 +447,124 @@ export default function Discovery({ session }) {
           </div>
 
           <div className="flex flex-wrap gap-2.5 sm:flex-row">
+            <label htmlFor="track-filter" className="sr-only">Featured Study Track</label>
             <select
-              className="rounded-xl border border-secondary-200 bg-white px-3 py-2 text-xs font-semibold text-secondary-700 outline-none focus:border-primary-500 shadow-sm"
+              className={`rounded-xl border border-secondary-200 bg-white px-3 py-2 text-xs font-semibold text-secondary-700 outline-none focus:border-primary-500 shadow-sm ${FOCUS}`}
+              id="track-filter"
+              data-testid="track-filter"
+              onChange={(event) => setTrack(event.target.value)}
+              value={track}
+            >
+              <option value="">All study tracks</option>
+              {(result.studyTracks || []).map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+
+            <label htmlFor="country-filter" className="sr-only">Country</label>
+            <select
+              className={`rounded-xl border border-secondary-200 bg-white px-3 py-2 text-xs font-semibold text-secondary-700 outline-none focus:border-primary-500 shadow-sm ${FOCUS}`}
               id="country-filter"
+              data-testid="country-filter"
               onChange={(event) => setCountry(event.target.value)}
               value={country}
             >
               <option value="">All countries</option>
-              {result.countries.map((name) => <option key={name}>{name}</option>)}
+              {result.countries.map((name) => <option key={name} value={name}>{name}</option>)}
             </select>
 
+            <label htmlFor="level-filter" className="sr-only">Degree level</label>
             <select
-              className="rounded-xl border border-secondary-200 bg-white px-3 py-2 text-xs font-semibold text-secondary-700 outline-none focus:border-primary-500 shadow-sm"
+              className={`rounded-xl border border-secondary-200 bg-white px-3 py-2 text-xs font-semibold text-secondary-700 outline-none focus:border-primary-500 shadow-sm ${FOCUS}`}
               id="level-filter"
+              data-testid="level-filter"
               onChange={(event) => setLevel(event.target.value)}
               value={level}
             >
               <option value="">All degree levels</option>
-              {result.levels.map((name) => <option key={name}>{name}</option>)}
+              {result.levels.map((name) => <option key={name} value={name}>{name}</option>)}
             </select>
+
+            {(query || country || level || track) && (
+              <button
+                type="button"
+                data-testid="clear-all-filters-btn"
+                onClick={clearFilters}
+                className="rounded-xl border border-secondary-200 bg-white px-3 py-2 text-xs font-bold text-secondary-600 hover:text-secondary-900 hover:bg-secondary-50 transition"
+              >
+                Clear filters
+              </button>
+            )}
           </div>
         </div>
+
+        {/* Active Filters Display Chips */}
+        {(track || country || level || query) && (
+          <div className="mb-4 flex flex-wrap items-center gap-2" data-testid="active-filter-chips">
+            <span className="text-[11px] font-bold text-secondary-500 uppercase tracking-wider">Active filters:</span>
+            {track && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-50 border border-primary-200 px-3 py-0.5 text-xs font-semibold text-primary-800">
+                Track: {track}
+                <button
+                  type="button"
+                  aria-label={`Remove track filter ${track}`}
+                  onClick={() => setTrack('')}
+                  className="hover:text-primary-950 font-bold ml-0.5"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            {country && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary-100 border border-secondary-200 px-3 py-0.5 text-xs font-semibold text-secondary-800">
+                Country: {country}
+                <button
+                  type="button"
+                  aria-label={`Remove country filter ${country}`}
+                  onClick={() => setCountry('')}
+                  className="hover:text-secondary-950 font-bold ml-0.5"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            {level && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary-100 border border-secondary-200 px-3 py-0.5 text-xs font-semibold text-secondary-800">
+                Level: {level}
+                <button
+                  type="button"
+                  aria-label={`Remove level filter ${level}`}
+                  onClick={() => setLevel('')}
+                  className="hover:text-secondary-950 font-bold ml-0.5"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            {query && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary-100 border border-secondary-200 px-3 py-0.5 text-xs font-semibold text-secondary-800">
+                Keyword: "{query}"
+                <button
+                  type="button"
+                  aria-label={`Remove keyword filter ${query}`}
+                  onClick={() => setQuery('')}
+                  className="hover:text-secondary-950 font-bold ml-0.5"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="text-xs font-bold text-primary-600 hover:underline ml-1"
+            >
+              Reset all
+            </button>
+          </div>
+        )}
 
         {error && (
           <div className="mb-4 flex items-center justify-between gap-4 rounded-2xl border border-danger-200 bg-danger-50 p-4 text-xs text-danger-700" role="alert">
@@ -426,6 +649,56 @@ export default function Discovery({ session }) {
                     <p className="text-[10px] uppercase font-bold text-secondary-400">Degree</p>
                     <p className="mt-0.5 font-bold text-secondary-900">{item.level}</p>
                   </div>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-secondary-100 flex flex-wrap items-center justify-between gap-2.5">
+                  <button
+                    type="button"
+                    data-testid={`view-details-${item.id}`}
+                    onClick={() => setSelectedProgram(item)}
+                    className={`inline-flex items-center gap-1.5 rounded-xl border border-secondary-200 bg-white hover:bg-secondary-50 px-3 py-1.5 text-xs font-bold text-secondary-700 hover:text-secondary-900 transition ${FOCUS}`}
+                  >
+                    <span>View Details</span>
+                    <span aria-hidden="true">→</span>
+                  </button>
+
+                  {isProgramTracked(item.id) ? (
+                    <button
+                      type="button"
+                      data-testid={`track-program-btn-${item.id}`}
+                      onClick={() => onNavigate?.('Applications')}
+                      className={`inline-flex items-center gap-1.5 rounded-xl border border-success-200 bg-success-50 hover:bg-success-100 px-3.5 py-1.5 text-xs font-bold text-success-800 transition ${FOCUS}`}
+                      title="View in Application Tracker"
+                    >
+                      <span className="h-2 w-2 rounded-full bg-success-600" aria-hidden="true" />
+                      <span>In Application Tracker</span>
+                      <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      data-testid={`track-program-btn-${item.id}`}
+                      disabled={trackingIds.has(item.id)}
+                      onClick={() => trackProgram(item)}
+                      className={`inline-flex items-center gap-1.5 rounded-xl bg-primary-500 hover:bg-primary-600 px-3.5 py-1.5 text-xs font-extrabold text-white shadow-sm shadow-primary-500/20 transition disabled:opacity-60 ${FOCUS}`}
+                    >
+                      {trackingIds.has(item.id) ? (
+                        <>
+                          <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" aria-hidden="true" />
+                          <span>Tracking…</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path d="M12 4v16m8-8H4" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          <span>Add to Application Tracker</span>
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </article>
             ))}
@@ -513,6 +786,28 @@ export default function Discovery({ session }) {
           </section>
         </div>
       )}
+      {/* Program Details Modal */}
+      <ProgramDetailsModal
+        isOpen={Boolean(selectedProgram)}
+        onClose={() => setSelectedProgram(null)}
+        program={selectedProgram}
+        session={session}
+        onToggleSave={toggleSaved}
+        onTrackProgram={(id) => {
+          setTrackedProgramIds((prev) => new Set(prev).add(id))
+          setResult((curr) => ({
+            ...curr,
+            programs: curr.programs.map((p) => p.id === id ? { ...p, isTracked: true } : p),
+          }))
+          setToastMessage('Added to Application Tracker')
+        }}
+        onNavigate={onNavigate}
+      />
+      <Toast
+        message={toastMessage}
+        actionLabel={toastMessage.includes('Added') ? 'View Application Tracker' : undefined}
+        onAction={() => onNavigate?.('Applications')}
+      />
     </div>
   )
 }
