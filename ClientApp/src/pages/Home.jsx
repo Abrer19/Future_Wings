@@ -1,4 +1,3 @@
-import AnnouncementBar from '../components/home/AnnouncementBar.jsx'
 import SiteHeader from '../components/home/SiteHeader.jsx'
 import Hero from '../components/home/Hero.jsx'
 import TrustMetrics from '../components/home/TrustMetrics.jsx'
@@ -44,10 +43,7 @@ export default function Home({
         Skip to main content
       </a>
 
-      {/* Section 1: Buildathon Announcement Bar */}
-      <AnnouncementBar />
-
-      {/* Section 2: Fixed / Sticky Header */}
+      {/* Sticky Header */}
       <SiteHeader onSignIn={onSignIn} onSignUp={onSignUp} />
 
       <main id="main">

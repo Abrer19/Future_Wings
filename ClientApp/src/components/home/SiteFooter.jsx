@@ -37,7 +37,7 @@ export default function SiteFooter() {
     <footer className="border-t border-secondary-200/80 bg-white" id="contact">
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="grid gap-12 lg:grid-cols-6">
-          {/* Brand info & Buildathon sticker (spans 2 columns) */}
+          {/* Brand info (spans 2 columns) */}
           <div className="lg:col-span-2">
             <div className="flex items-center gap-2.5">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-500 text-white shadow-md shadow-primary-500/20">
@@ -51,19 +51,6 @@ export default function SiteFooter() {
             <p className="mt-4 max-w-sm text-xs leading-relaxed text-secondary-600 font-normal">
               The intelligent end-to-end workspace for international students. Calibrate admission tiers, audit documents, simulate visa interviews, and discover funded scholarships.
             </p>
-
-            {/* Official Buildathon Badge Sticker */}
-            <div className="mt-6 inline-flex items-center gap-2.5 rounded-2xl border border-primary-200/90 bg-gradient-to-r from-primary-50/80 via-white to-blue-50/80 p-3 shadow-xs">
-              <span className="text-xl" role="img" aria-label="Trophy">🏆</span>
-              <div>
-                <p className="text-[11px] font-bold text-secondary-900 leading-tight">
-                  Microsoft Imagine Cup & Azure AI Global Buildathon 2026
-                </p>
-                <p className="text-[10px] text-secondary-500 font-medium">
-                  Deployed on Azure App Service & SQL Server
-                </p>
-              </div>
-            </div>
 
             {/* Contact details */}
             <div className="mt-6 space-y-1.5 text-xs text-secondary-600">
