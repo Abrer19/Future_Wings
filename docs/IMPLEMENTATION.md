@@ -87,6 +87,38 @@ Document uploads enforce strict multi-layer security:
 - **Atomic Operations & Cleanup**: If database persistence fails during an upload, the written file is automatically removed. When a document is deleted, the database row and physical file are both purged.
 - **Persistence Across Restarts**: Stored documents reside in `App_Data/documents` by default, configurable via `DocumentStorage:Path` (`DocumentStorage__Path` env var). In Docker deployments, this path is mounted to the named volume `document-data:/app/App_Data/documents`.
 
+## Student Academic Profile Completion & Feature Gating
+
+Accurate study-abroad features (such as personalized AI program recommendations, the interactive study roadmap knowledge graph, and scholarship eligibility matching) strictly depend on complete student academic data.
+
+### Four Required Academic Core Fields
+Profile completeness for students is determined by exactly four core fields:
+1. **CGPA**: Numeric score between `0.0` and `4.0` (out of 4.0 scale).
+2. **Target Academic Major**: Non-empty trimmed string representing intended major.
+3. **Annual Tuition & Living Budget (USD)**: Numeric liquid funds strictly greater than zero (`> 0`).
+4. **Target Degree Level**: Valid selected degree level (`Bachelor's`, `Master's`, `PhD`, `Diploma`, `Certificate`).
+
+> First Name and Last Name are validated on the personal profile form, but the four academic fields above govern academic readiness and feature gating.
+
+### Server-Side Source of Truth
+- `GET /api/profile` dynamically evaluates profile completeness on the server and returns:
+  - `isAcademicComplete` (boolean)
+  - `completedCoreFieldsCount` (integer, 0 to 4)
+  - `totalRequiredCoreFieldsCount` (`4`)
+  - `missingCoreFields` (list of missing field names, e.g. `["Target Major", "Annual Budget"]`)
+  - `completionPercentage` (`0` to `100%`)
+- Profile queries and updates are strictly scoped by the authenticated JWT `NameIdentifier` claim, preventing cross-user profile access.
+
+### Onboarding Flow & Escape Paths
+1. **Onboarding Prompt**: Upon student login, if the profile is incomplete, a prominent prompt dialog (`ProfileCompletionPrompt`) informs the student why profile completion matters and displays a 4-field milestone progress tracker.
+2. **Temporary Skip Path**: Students can click **Skip for Now** without permanently blocking general browsing. The dismissal is saved per-session in `sessionStorage` and displays a persistent inline warning banner (`ProfileIncompleteBanner`). The prompt returns on the next session if the profile remains incomplete.
+3. **Sidebar Action**: When the profile is incomplete, the sidebar account area displays `Complete Your Profile (X/4)` before `Take Product Tour`. Once complete, the standard `Take Product Tour` action is shown.
+4. **Exemption for Privileged Roles**: Admin and Agent roles are not students and are never prompted or gated by the student profile requirement.
+5. **Feature Gating**:
+   - **Recommendations**: Displays a dedicated profile-required state explaining the missing fields with a direct link to Profile.
+   - **Roadmap / Knowledge Graph**: Highlights missing core milestones with gap nodes and displays an advisory banner.
+   - **Scholarships**: Shows all general funding opportunities with a notice that personalized matching requires profile completion. General search, deadlines, and tracking remain fully operational.
+
 ## Subscriptions, Stripe & Idempotency
 
 - **Judge Demo Simulation**: Simulated upgrade is enabled only in Development when `FUTUREWINGS_DEMO_MODE=true` or demo keys are used. Simulated checkouts are strictly rejected in Production or whenever a real Stripe secret key is configured.

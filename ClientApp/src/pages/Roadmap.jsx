@@ -4,6 +4,7 @@ import '@xyflow/react/dist/style.css'
 import { apiRequest } from '../auth.js'
 import { BTN_PRIMARY, CARD } from '../components/ui/styles.js'
 import { FIELDS, NODE_KINDS, buildRoadmapGraph, isSet } from '../lib/buildRoadmapGraph.js'
+import { evaluateProfileCompletion } from '../lib/profileCompletion.js'
 
 /**
  * Roadmap — visual study roadmap & profile completeness trajectory.
@@ -161,6 +162,8 @@ export default function Roadmap({ session, onNavigate }) {
 
   const handleNavigate = useCallback((action) => { onNavigate?.(action.page) }, [onNavigate])
 
+  const profileCompletion = useMemo(() => evaluateProfileCompletion(profile), [profile])
+
   const graph = useMemo(
     () => (profile ? buildRoadmapGraph(profile, programs) : null),
     [profile, programs],
@@ -171,7 +174,6 @@ export default function Roadmap({ session, onNavigate }) {
     [graph, handleNavigate],
   )
 
-  const emptyProfile = graph && graph.completed === 0
   const completionPercentage = graph ? Math.round((graph.completed / graph.total) * 100) : 0
 
   return (
@@ -223,18 +225,31 @@ export default function Roadmap({ session, onNavigate }) {
         </div>
       )}
 
-      {emptyProfile && (
-        <div className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-warning-200 bg-warning-50 p-4 text-sm text-warning-800 sm:flex-row sm:items-center">
+      {/* Incomplete profile state banner */}
+      {!loading && profile && !profileCompletion.isComplete && (
+        <div
+          className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-warning-200 bg-warning-50 p-4 text-sm text-warning-800 sm:flex-row sm:items-center"
+          data-testid="roadmap-incomplete-banner"
+          role="alert"
+        >
           <div className="flex items-center gap-3">
             <svg className="h-5 w-5 shrink-0 text-warning-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
             </svg>
-            <p>Your profile is missing academic details. Fill in your study criteria to unlock university matching.</p>
+            <div>
+              <p className="font-bold text-warning-950">
+                Profile incomplete ({profileCompletion.completedCount} of {profileCompletion.totalRequired} core fields completed)
+              </p>
+              <p className="text-xs text-warning-800">
+                Missing: {profileCompletion.missingFields.join(', ')}. Complete your profile to unlock accurate target university matching.
+              </p>
+            </div>
           </div>
           <button
             className="shrink-0 rounded-lg bg-warning-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-warning-700"
             onClick={() => onNavigate?.('Profile')}
             type="button"
+            data-testid="roadmap-go-to-profile-btn"
           >
             Complete Profile &rarr;
           </button>

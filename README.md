@@ -3,7 +3,7 @@
 ![Continuous Integration](https://github.com/Abrer19/Future_Wings/actions/workflows/ci.yml/badge.svg)
 ![.NET 8](https://img.shields.io/badge/.NET-8.0-purple.svg)
 ![React 19](https://img.shields.io/badge/React-19-blue.svg)
-![Tests](https://img.shields.io/badge/Tests-198%20Passed-success.svg)
+![Tests](https://img.shields.io/badge/Tests-228%20Passed-success.svg)
 
 A modern, full-stack study-abroad planning and application tracking platform. Students discover university programs worldwide, shortlist and compare degrees, manage application lifecycles and deadlines, store essential visa and admission documents, and receive personalized AI-driven program recommendations. Administrators have an operations console for managing users and monitoring platform activity.
 
@@ -108,6 +108,30 @@ To enable demo mode, run the backend in `Development` with the demo flag:
 
 ---
 
+## 🎓 Student Academic Profile Completion & Onboarding
+
+Accurate personalized features (AI program recommendations, the interactive study roadmap knowledge graph, and tailored scholarship matching) strictly require complete student academic details.
+
+### The Four Required Academic Core Fields
+A student profile is evaluated based on four core criteria:
+1. **Undergraduate / High School CGPA**: Numeric and within the `0.0`–`4.0` range.
+2. **Target Academic Major**: Non-empty trimmed string representing intended major.
+3. **Annual Tuition & Living Budget (USD)**: Numeric funds strictly greater than zero (`> 0`).
+4. **Target Degree Level**: Valid selected degree level (`Bachelor's`, `Master's`, `PhD`, `Diploma`, `Certificate`).
+
+### Onboarding Flow & Escape Paths
+- **Server-Side Truth**: `GET /api/profile` returns calculated completion properties (`isAcademicComplete`, `completedCoreFieldsCount`, `totalRequiredCoreFieldsCount`, `missingCoreFields`, `completionPercentage`), scoped strictly by the authenticated JWT.
+- **Onboarding Modal**: Incomplete student accounts see the `ProfileCompletionPrompt` modal upon login explaining why profile completion is necessary and displaying a progress tracker.
+- **Escape Path (Skip for Now)**: Students can temporarily dismiss the modal for the current session to explore general pages. The dismissal is saved per-session (`sessionStorage`) and displays a persistent inline warning banner (`ProfileIncompleteBanner`) with a direct button to Complete Profile.
+- **Sidebar Integration**: The sidebar account area displays `Complete Your Profile (X/4)` before `Take Product Tour`. Once completed, the normal `Take Product Tour` button is shown.
+- **Non-Student Exemption**: Admin and Agent users are platform overseers and are never forced through student profile onboarding.
+- **Feature Gating**:
+  - **Recommendations**: Displays a dedicated incomplete-profile state detailing the missing fields with an action to Complete Profile.
+  - **Roadmap / Knowledge Graph**: Highlights missing core milestones with gap nodes and an alert banner.
+  - **Scholarships**: Shows general funding opportunities with a notice that personalized matching requires profile completion. General search, deadlines, and tracking remain fully operational.
+
+---
+
 ## 🧪 Automated Testing
 
 The solution includes an extensive automated test suite covering unit, cryptographic, security, and integration tests:
@@ -123,7 +147,8 @@ cd ClientApp
 npm test -- --run
 ```
 
-### Test Coverage (156 Backend Tests + 42 Frontend Tests = 198 Total)
+### Test Coverage (165 Backend Tests + 63 Frontend Tests = 228 Total)
+- **Student Profile Onboarding & Academic Readiness**: Required 4 core academic fields validation (CGPA in [0, 4.0], trimmed major, positive budget > $0, target degree level), server-side calculation and persistence in `GET /api/profile`, onboarding prompt modal with progress bar and checklist, temporary session skip dismissal, persistent inline warning banner, sidebar completion pill placed before product tour, and graceful gating on Recommendations, Roadmap, and Scholarships.
 - **Authentication Security**: Privilege escalation prevention (first user cannot become Admin), BCrypt password hashing & salt verification, token claim injection, role-based authorization.
 - **Stripe & Subscriptions**: Demo-mode gating, Pro-only entitlement granting, production simulation rejection, idempotent webhook and demo unlock handling, invalid return URL rejection, live key safety guards.
 - **Scholarships & Application Process Tracking**: Dedicated scholarship details view with study-level and field restrictions, official links, document criteria, idempotent user interest tracking, ordered application checklist generation, step-level completion toggling, and user ownership isolation.

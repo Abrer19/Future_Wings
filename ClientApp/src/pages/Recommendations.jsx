@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { apiRequest } from '../auth.js'
+import { BTN_PRIMARY, CARD, FOCUS } from '../components/ui/styles.js'
+import { evaluateProfileCompletion } from '../lib/profileCompletion.js'
 
 const formatTuition = (amount) => new Intl.NumberFormat('en-US', {
   style: 'currency', currency: 'USD', maximumFractionDigits: 0,
@@ -9,18 +11,24 @@ const formatDuration = (months) => months % 12 === 0
   ? `${months / 12} year${months === 12 ? '' : 's'}`
   : `${months} months`
 
-export default function Recommendations({ session }) {
+export default function Recommendations({ session, onNavigate }) {
+  const [profile, setProfile] = useState(null)
   const [recommendations, setRecommendations] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [savingIds, setSavingIds] = useState(() => new Set())
   const [refreshKey, setRefreshKey] = useState(0)
 
-  const loadRecommendations = useCallback(async () => {
+  const loadData = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
-      setRecommendations(await apiRequest('/recommendation', { token: session.token }))
+      const [profileData, recs] = await Promise.all([
+        apiRequest('/profile', { token: session.token }),
+        apiRequest('/recommendation', { token: session.token }),
+      ])
+      setProfile(profileData)
+      setRecommendations(recs)
     } catch (requestError) {
       setError(requestError.message)
     } finally {
@@ -29,9 +37,9 @@ export default function Recommendations({ session }) {
   }, [session.token])
 
   useEffect(() => {
-    const timer = setTimeout(loadRecommendations, 0)
+    const timer = setTimeout(loadData, 0)
     return () => clearTimeout(timer)
-  }, [loadRecommendations, refreshKey])
+  }, [loadData, refreshKey])
 
   const toggleSaved = async (recommendation) => {
     if (savingIds.has(recommendation.programId)) return
@@ -50,11 +58,67 @@ export default function Recommendations({ session }) {
     }
   }
 
+  const profileCompletion = useMemo(() => evaluateProfileCompletion(profile), [profile])
+
   const stats = useMemo(() => ({
     excellent: recommendations.filter((item) => item.matchScore >= 90).length,
     countries: new Set(recommendations.map((item) => item.country)).size,
     saved: recommendations.filter((item) => item.isSaved).length,
   }), [recommendations])
+
+  // Profile-completion required state
+  if (!loading && profile && !profileCompletion.isComplete) {
+    return (
+      <div className="mx-auto max-w-4xl space-y-8 pb-16" data-testid="recommendations-incomplete-state">
+        <header className="relative overflow-hidden rounded-3xl border border-secondary-200 bg-gradient-to-r from-secondary-950 via-secondary-900 to-secondary-950 p-6 sm:p-8 text-white shadow-xl">
+          <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary-500/15 blur-3xl" />
+          <div className="relative z-10 max-w-2xl">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-warning-500/20 border border-warning-400/30 px-3 py-0.5 text-xs font-bold uppercase tracking-wider text-warning-300">
+              <span className="h-2 w-2 rounded-full bg-warning-400" />
+              Profile Completion Required
+            </span>
+            <h1 className="mt-3 text-2xl sm:text-3xl font-black tracking-tight text-white">
+              Personalized University Recommendations
+            </h1>
+            <p className="mt-2 text-xs sm:text-sm text-secondary-300 leading-relaxed">
+              Our AI Match Engine evaluates your academic eligibility, annual tuition budget, and degree level to calculate authentic match scores.
+            </p>
+          </div>
+        </header>
+
+        <section className={`${CARD} p-8 sm:p-12 text-center space-y-6`}>
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-warning-100 text-warning-700">
+            <svg className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+            </svg>
+          </div>
+
+          <div className="max-w-md mx-auto space-y-2">
+            <h2 className="text-xl font-bold text-secondary-950">Complete Your Academic Profile</h2>
+            <p className="text-sm text-secondary-600 leading-relaxed">
+              Your profile is missing required academic fields ({profileCompletion.completedCount} of {profileCompletion.totalRequired} completed).
+              {profileCompletion.missingFields.length > 0 && (
+                <span className="block mt-1 font-semibold text-secondary-800">
+                  Missing: {profileCompletion.missingFields.join(', ')}
+                </span>
+              )}
+            </p>
+          </div>
+
+          <div className="pt-2">
+            <button
+              className={`${BTN_PRIMARY} px-8 py-3 text-xs font-extrabold`}
+              onClick={() => onNavigate?.('Profile')}
+              type="button"
+              data-testid="recommendations-go-to-profile-btn"
+            >
+              Complete Profile Now &rarr;
+            </button>
+          </div>
+        </section>
+      </div>
+    )
+  }
 
   return (
     <div className="mx-auto max-w-7xl space-y-8 pb-16">
@@ -148,65 +212,58 @@ export default function Recommendations({ session }) {
                       <p className="text-xs font-bold uppercase tracking-wider text-primary-600">
                         {item.country} · {item.city}
                       </p>
-                      <h3 className="mt-0.5 text-lg font-black text-secondary-950 group-hover:text-primary-600 transition">
+                      <h3 className="text-lg font-black tracking-tight text-secondary-950 group-hover:text-primary-600 transition-colors">
                         {item.programName}
                       </h3>
-                      <p className="text-xs font-semibold text-secondary-500">{item.universityName}</p>
+                      <p className="text-xs font-medium text-secondary-500">
+                        {item.universityName}
+                      </p>
                     </div>
                   </div>
 
-                  <p className="mt-4 rounded-2xl bg-secondary-50 border border-secondary-200/70 p-3.5 text-xs leading-relaxed text-secondary-800">
-                    <span className="font-bold text-primary-700 mr-1">Match Reason:</span>
-                    {item.reason}
-                  </p>
+                  {item.reason && (
+                    <div className="mt-4 rounded-xl bg-secondary-50/80 border border-secondary-200/60 p-3 text-xs text-secondary-700">
+                      <span className="font-bold text-secondary-900">Why this fits: </span>
+                      {item.reason}
+                    </div>
+                  )}
 
                   <div className="mt-4 flex flex-wrap gap-1.5">
                     {item.tags.map((tag) => (
-                      <span className="rounded-lg bg-secondary-100/80 px-2.5 py-0.5 text-[11px] font-medium text-secondary-600" key={tag}>
+                      <span
+                        className="rounded-lg bg-secondary-100 px-2 py-0.5 text-[11px] font-semibold text-secondary-600"
+                        key={tag}
+                      >
                         {tag}
                       </span>
                     ))}
                   </div>
                 </div>
 
-                <div className="mt-6 border-t border-secondary-100 pt-4">
-                  <dl className="grid grid-cols-3 text-xs mb-4">
-                    <div>
-                      <dt className="text-[10px] uppercase font-bold text-secondary-400">Tuition</dt>
-                      <dd className="mt-0.5 font-bold text-secondary-900">{formatTuition(item.annualTuitionUsd)}/yr</dd>
-                    </div>
-                    <div>
-                      <dt className="text-[10px] uppercase font-bold text-secondary-400">Duration</dt>
-                      <dd className="mt-0.5 font-bold text-secondary-900">{formatDuration(item.durationMonths)}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-[10px] uppercase font-bold text-secondary-400">Degree</dt>
-                      <dd className="mt-0.5 font-bold text-secondary-900">{item.level}</dd>
-                    </div>
-                  </dl>
+                <div className="mt-6 border-t border-secondary-100 pt-4 flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <p className="text-xs text-secondary-400">Annual Tuition</p>
+                    <p className="text-base font-black text-secondary-950">
+                      {formatTuition(item.annualTuitionUsd)}
+                    </p>
+                    <p className="text-[11px] text-secondary-500">{formatDuration(item.durationMonths)}</p>
+                  </div>
 
                   <button
-                    className={`w-full rounded-2xl py-2.5 text-xs font-extrabold transition shadow-sm ${
+                    className={`rounded-xl border px-4 py-2 text-xs font-bold transition ${FOCUS} ${
                       item.isSaved
-                        ? 'bg-primary-500 text-white shadow-primary-500/25'
-                        : 'border border-secondary-300 bg-white text-secondary-700 hover:bg-secondary-50 hover:border-secondary-400'
+                        ? 'border-primary-500 bg-primary-50 text-primary-700 hover:bg-primary-100'
+                        : 'border-secondary-200 bg-white text-secondary-700 hover:bg-secondary-50'
                     }`}
                     disabled={savingIds.has(item.programId)}
                     onClick={() => toggleSaved(item)}
                     type="button"
                   >
-                    {savingIds.has(item.programId) ? 'Saving…' : item.isSaved ? 'Saved to Shortlist' : 'Add to Shortlist'}
+                    {item.isSaved ? 'Saved ✓' : 'Save to Shortlist'}
                   </button>
                 </div>
               </article>
             ))}
-          </div>
-        )}
-
-        {!loading && recommendations.length === 0 && (
-          <div className="rounded-3xl border border-dashed border-secondary-300 bg-white px-6 py-14 text-center">
-            <p className="font-bold text-secondary-950 text-base">No recommendations generated yet</p>
-            <p className="mt-1 text-xs text-secondary-500">Complete your profile details to generate personalized program matches.</p>
           </div>
         )}
       </section>
