@@ -1,3 +1,5 @@
+import { sanitizeReviewText } from '../../lib/sanitizeText.js'
+
 const initials = (name) => (name || '')
   .split(/\s+/)
   .filter(Boolean)
@@ -10,6 +12,8 @@ const ratingText = (score) => `${score}/5`
 
 export default function ReviewCard({ review }) {
   if (!review) return null
+
+  const cleanComment = sanitizeReviewText(review.comment)
 
   return (
     <article className="rounded-lg border border-secondary-200 bg-white p-4" data-testid="review-card">
@@ -29,8 +33,8 @@ export default function ReviewCard({ review }) {
               {ratingText(review.score)}
             </span>
           </div>
-          <p className="mt-2 text-sm leading-6 text-secondary-600" data-testid="review-comment">
-            {review.comment || 'No written comment provided.'}
+          <p className="mt-2 text-sm leading-6 text-secondary-600 whitespace-pre-line" data-testid="review-comment">
+            {cleanComment || 'No written comment provided.'}
           </p>
         </div>
       </div>

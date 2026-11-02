@@ -192,6 +192,9 @@ export default function Subscription({ session, subscription, onSubscriptionChan
 
   const simulated = subscription?.simulationEnabled === true || subscription?.isDemoMode === true
   const publishableKey = subscription?.publishableKey || 'pk_test_demo_51FutureWingsDemoPublishableKey889201'
+  const currentTier = subscription?.tier ?? 'Free'
+  const isProOrPremium = currentTier === 'Pro' || currentTier === 'Premium'
+  const canUnlockProDemo = simulated && !isProOrPremium
 
   const handleOpenUpgrade = (plan) => {
     if (simulated) {
@@ -236,6 +239,24 @@ export default function Subscription({ session, subscription, onSubscriptionChan
     }
   }
 
+  // Demo mode shortcut to unlock Pro without requiring card details
+  const handleUnlockProDemo = async () => {
+    setBusyTier('UnlockPro')
+    setError('')
+    try {
+      await apiRequest('/subscription/demo-pro', {
+        token: session.token,
+        method: 'POST',
+      })
+      onSubscriptionChange?.()
+      setToast('Pro demo access enabled')
+    } catch (requestError) {
+      setError(requestError.message || 'Failed to unlock Pro demo.')
+    } finally {
+      setBusyTier('')
+    }
+  }
+
   // Test-mode only: lets the tiers be demoed repeatedly without a database edit.
   const downgrade = async () => {
     setBusyTier('Free')
@@ -254,8 +275,6 @@ export default function Subscription({ session, subscription, onSubscriptionChan
       setBusyTier('')
     }
   }
-
-  const currentTier = subscription?.tier ?? 'Free'
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -293,16 +312,29 @@ export default function Subscription({ session, subscription, onSubscriptionChan
               </p>
             </div>
           </div>
-          {currentTier !== 'Free' && (
-            <button
-              onClick={() => downgrade()}
-              disabled={busyTier === 'Free'}
-              className="rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 shadow-sm hover:bg-indigo-50 transition"
-              type="button"
-            >
-              {busyTier === 'Free' ? 'Resetting...' : 'Reset to Free Tier'}
-            </button>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {canUnlockProDemo && (
+              <button
+                onClick={handleUnlockProDemo}
+                disabled={Boolean(busyTier)}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-indigo-700 transition disabled:opacity-60"
+                type="button"
+                data-testid="unlock-pro-demo-banner-btn"
+              >
+                {busyTier === 'UnlockPro' ? 'Unlocking...' : 'Unlock Pro Demo'}
+              </button>
+            )}
+            {currentTier !== 'Free' && (
+              <button
+                onClick={() => downgrade()}
+                disabled={busyTier === 'Free'}
+                className="rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 shadow-sm hover:bg-indigo-50 transition"
+                type="button"
+              >
+                {busyTier === 'Free' ? 'Resetting...' : 'Reset to Free Tier'}
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -384,6 +416,21 @@ export default function Subscription({ session, subscription, onSubscriptionChan
                         {busyTier === 'Free' ? 'Applying…' : 'Switch back to Free'}
                       </button>
                     ) : <p className="text-sm text-secondary-500">Included by default.</p>
+                  ) : plan.tier === 'Pro' && canUnlockProDemo ? (
+                    <div className="flex flex-col gap-2">
+                      <button
+                        className={`w-full ${BTN_PRIMARY} ${FOCUS} bg-indigo-600 hover:bg-indigo-700 text-white`}
+                        disabled={Boolean(busyTier)}
+                        onClick={handleUnlockProDemo}
+                        type="button"
+                        data-testid="unlock-pro-demo-btn"
+                      >
+                        {busyTier === 'UnlockPro' ? 'Unlocking...' : 'Unlock Pro Demo'}
+                      </button>
+                      <p className="text-xs text-secondary-500 text-center">
+                        Instant simulated unlock &bull; No card required
+                      </p>
+                    </div>
                   ) : (
                     <button
                       className={`w-full ${BTN_PRIMARY} ${FOCUS}`}
@@ -401,7 +448,7 @@ export default function Subscription({ session, subscription, onSubscriptionChan
                   {!isCurrent && !isFree && !plan.purchasable && (
                     <p className="mt-2 text-xs text-secondary-400">Unavailable until payments are configured.</p>
                   )}
-                  {!isCurrent && !isFree && plan.purchasable && simulated && (
+                  {!isCurrent && !isFree && plan.purchasable && simulated && plan.tier !== 'Pro' && (
                     <p className="mt-2 text-xs text-secondary-400">⚡ Instant test checkout with demo key.</p>
                   )}
                 </div>

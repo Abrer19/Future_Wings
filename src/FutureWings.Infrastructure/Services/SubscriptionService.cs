@@ -10,7 +10,7 @@ using Stripe.Checkout;
 namespace FutureWings.Infrastructure.Services;
 
 /// <summary>
-/// Subscription state plus real Stripe Checkout.
+/// Subscription state plus real Stripe Checkout and local demo simulation.
 ///
 /// Configuration (user-secrets in Development, environment variables in Production):
 ///   Stripe:SecretKey        sk_test_... / sk_live_...
@@ -19,7 +19,8 @@ namespace FutureWings.Infrastructure.Services;
 ///   Stripe:Prices:Premium   price_...
 ///
 /// Nothing here has a hardcoded key, and no tier is ever granted without a verified
-/// Stripe event — <see cref="ApplyWebhookAsync"/> is the only path that upgrades a user.
+/// Stripe event — <see cref="ApplyWebhookAsync"/> is the only path that upgrades a user
+/// in production. In development/demo mode, UnlockProDemoAsync grants Pro tier only.
 /// </summary>
 public sealed class SubscriptionService(
     FutureWingsDbContext context,
@@ -54,14 +55,19 @@ public sealed class SubscriptionService(
     private bool IsProduction =>
         string.Equals(CurrentEnvironment, "Production", StringComparison.OrdinalIgnoreCase);
 
+    private bool IsDemoModeConfigured =>
+        (bool.TryParse(configuration["DemoMode:Enabled"], out var demoEnabled) && demoEnabled) ||
+        string.Equals(configuration["FUTUREWINGS_DEMO_MODE"] ?? Environment.GetEnvironmentVariable("FUTUREWINGS_DEMO_MODE"), "true", StringComparison.OrdinalIgnoreCase);
+
     /// <summary>
     /// Fake checkout, for local development and demos.
     /// Strictly disabled in Production.
-    /// Enabled when in demo key mode, or when explicitly allowed in configuration without real live keys.
+    /// Enabled when in demo key mode, when demo mode is enabled, or when explicitly allowed in configuration without real live keys.
     /// </summary>
     public bool SimulationEnabled =>
         !IsProduction &&
         (IsDemoKey
+        || IsDemoModeConfigured
         || (!StripeConfigured
             && bool.TryParse(configuration["Stripe:AllowSimulatedCheckout"], out var allowed)
             && allowed));
@@ -97,7 +103,7 @@ public sealed class SubscriptionService(
             StripeConfigured = StripeConfigured,
             SimulationEnabled = SimulationEnabled,
             PublishableKey = PublishableKey ?? (IsDemoKey ? "pk_test_demo_51FutureWingsDemoPublishableKey889201" : null),
-            IsDemoMode = IsDemoKey || SimulationEnabled,
+            IsDemoMode = !IsProduction && (IsDemoKey || SimulationEnabled || IsDemoModeConfigured),
         };
     }
 
@@ -173,12 +179,74 @@ public sealed class SubscriptionService(
         return new CheckoutSessionDto { SessionId = session.Id, CheckoutUrl = session.Url };
     }
 
-    public async Task<SubscriptionStatusDto> SimulateUpgradeAsync(int userId, string tier)
+    /// <summary>
+    /// Demo-mode action to unlock Pro plan without real payment.
+    /// Strictly refused in Production or when real Stripe live keys are configured.
+    /// Grants exclusively the Pro tier and Roadmap entitlements (no Premium, no aiInterview).
+    /// Fully idempotent: repeated calls do not create duplicate payments or conflicting entitlements.
+    /// </summary>
+    public async Task<SubscriptionStatusDto> UnlockProDemoAsync(int userId)
     {
         if (IsProduction || !SimulationEnabled || (StripeConfigured && !IsDemoKey))
         {
             throw new InvalidOperationException(
-                "Simulated checkout is disabled. It is only available in development while no real Stripe key is configured.");
+                "Simulated checkout is disabled. It is only available in development while demo mode is active and no real Stripe key is configured.");
+        }
+
+        var user = await context.Users.SingleOrDefaultAsync(candidate => candidate.Id == userId)
+            ?? throw new KeyNotFoundException("User not found.");
+
+        // If the user already has real Premium entitlement, preserve it without modifying or downgrading
+        if (user.SubscriptionTier == SubscriptionPlans.Premium)
+        {
+            return await GetStatusAsync(userId);
+        }
+
+        // If user is not already Pro, upgrade to Pro
+        if (user.SubscriptionTier != SubscriptionPlans.Pro)
+        {
+            user.SubscriptionTier = SubscriptionPlans.Pro;
+            user.SubscriptionRenewsAt = DateTimeOffset.UtcNow.AddMonths(1);
+
+            // Record simulated payment idempotently if not already present
+            var hasPayment = await context.Payments.AnyAsync(p => p.UserId == user.Id && p.Status == "Simulated");
+            if (!hasPayment)
+            {
+                var price = SubscriptionPlans.All.Single(plan => plan.Tier == SubscriptionPlans.Pro).MonthlyPriceUsd;
+                context.Payments.Add(new Payment
+                {
+                    UserId = user.Id,
+                    Amount = price,
+                    Currency = "usd",
+                    Status = "Simulated",
+                    Reference = $"sim_demo_pro_{user.Id}",
+                    CreatedAt = DateTimeOffset.UtcNow,
+                });
+            }
+
+            await context.SaveChangesAsync();
+        }
+
+        return await GetStatusAsync(userId);
+    }
+
+    public async Task<SubscriptionStatusDto> SimulateUpgradeAsync(int userId, string tier)
+    {
+        if (string.Equals(tier, SubscriptionPlans.Pro, StringComparison.OrdinalIgnoreCase))
+        {
+            return await UnlockProDemoAsync(userId);
+        }
+
+        if (IsProduction || !SimulationEnabled || (StripeConfigured && !IsDemoKey))
+        {
+            throw new InvalidOperationException(
+                "Simulated checkout is disabled. It is only available in development while demo mode is active and no real Stripe key is configured.");
+        }
+
+        if (string.Equals(tier, SubscriptionPlans.Premium, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "Simulated upgrade to Premium is disabled. Premium requires a real subscription entitlement.");
         }
 
         // Unlike real checkout, Free is allowed here: it is how a tester drops back down
@@ -192,27 +260,7 @@ public sealed class SubscriptionService(
             ?? throw new KeyNotFoundException("User not found.");
 
         user.SubscriptionTier = tier;
-        // No Stripe subscription exists, so leave StripeSubscriptionId null — that keeps
-        // simulated accounts distinguishable from genuinely paying ones.
-        user.SubscriptionRenewsAt = SubscriptionPlans.IsPaid(tier)
-            ? DateTimeOffset.UtcNow.AddMonths(1)
-            : null;
-
-        if (SubscriptionPlans.IsPaid(tier))
-        {
-            var price = SubscriptionPlans.All.Single(plan => plan.Tier == tier).MonthlyPriceUsd;
-            context.Payments.Add(new Payment
-            {
-                UserId = user.Id,
-                Amount = price,
-                Currency = "usd",
-                // Deliberately NOT "Succeeded" — a simulated payment must never be mistaken
-                // for a real one when reading the Payments table.
-                Status = "Simulated",
-                Reference = $"sim_{Guid.NewGuid():N}",
-                CreatedAt = DateTimeOffset.UtcNow,
-            });
-        }
+        user.SubscriptionRenewsAt = null;
 
         await context.SaveChangesAsync();
         return await GetStatusAsync(userId);
@@ -228,7 +276,8 @@ public sealed class SubscriptionService(
         var stripeEvent = EventUtility.ConstructEvent(payload, signatureHeader, webhookSecret, throwOnApiVersionMismatch: false);
 
         // Webhook Idempotency Check
-        if (await context.ProcessedWebhookEvents.AnyAsync(e => e.StripeEventId == stripeEvent.Id))
+        if (!string.IsNullOrWhiteSpace(stripeEvent.Id) &&
+            await context.ProcessedWebhookEvents.AnyAsync(e => e.StripeEventId == stripeEvent.Id))
         {
             return true;
         }
@@ -278,11 +327,12 @@ public sealed class SubscriptionService(
             case "customer.subscription.deleted":
             {
                 if (stripeEvent.Data.Object is not Subscription subscription) return false;
+
                 var user = await context.Users.SingleOrDefaultAsync(
                     candidate => candidate.StripeSubscriptionId == subscription.Id);
                 if (user is null) return false;
 
-                // Cancellation drops the account back to Free rather than deleting it.
+                // Drop back to Free on cancellation rather than locking the user out entirely.
                 user.SubscriptionTier = SubscriptionPlans.Free;
                 user.StripeSubscriptionId = null;
                 user.SubscriptionRenewsAt = null;
@@ -293,6 +343,7 @@ public sealed class SubscriptionService(
             }
 
             default:
+                // Other event types are ignored without error.
                 return false;
         }
     }

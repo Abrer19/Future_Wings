@@ -15,4 +15,10 @@ public interface ISubscriptionService
     /// Implementations must refuse unless simulation is explicitly enabled.
     /// </summary>
     Task<SubscriptionStatusDto> SimulateUpgradeAsync(int userId, string tier);
+
+    /// <summary>
+    /// Demo-mode action to unlock Pro plan without real payment.
+    /// Strictly refused in Production. Grants only Pro entitlements and is idempotent.
+    /// </summary>
+    Task<SubscriptionStatusDto> UnlockProDemoAsync(int userId);
 }

@@ -80,7 +80,8 @@ export async function apiRequest(path, { token, ...options } = {}) {
   const body = await response.json().catch(() => ({}))
   if (!response.ok) {
     const validationMessage = body.errors ? Object.values(body.errors).flat().join(' ') : null
-    throw new Error(body.message || validationMessage || 'The request could not be completed.')
+    const problemMessage = body.detail || (body.title && body.status < 500 ? body.title : null)
+    throw new Error(body.message || validationMessage || problemMessage || 'The request could not be completed.')
   }
   return body
 }

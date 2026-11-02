@@ -3,7 +3,7 @@
 ![Continuous Integration](https://github.com/Abrer19/Future_Wings/actions/workflows/ci.yml/badge.svg)
 ![.NET 8](https://img.shields.io/badge/.NET-8.0-purple.svg)
 ![React 19](https://img.shields.io/badge/React-19-blue.svg)
-![Tests](https://img.shields.io/badge/Tests-96%20Passed-success.svg)
+![Tests](https://img.shields.io/badge/Tests-175%20Passed-success.svg)
 
 A modern, full-stack study-abroad planning and application tracking platform. Students discover university programs worldwide, shortlist and compare degrees, manage application lifecycles and deadlines, store essential visa and admission documents, and receive personalized AI-driven program recommendations. Administrators have an operations console for managing users and monitoring platform activity.
 
@@ -61,16 +61,50 @@ Open <http://localhost:5173>. Vite automatically proxies `/api` calls to the bac
 
 ## 🏆 Judge Demo & Local Evaluation
 
-FutureWings includes a gated demo mode designed for evaluators:
-- To enable demo mode, run the backend with `FUTUREWINGS_DEMO_MODE=true` (or `DemoMode:Enabled=true` in `appsettings.Development.json`). This flag is strictly rejected in Production.
+FutureWings includes a hardened, gated demo mode designed specifically for evaluators to test features without financial transactions or external third-party dependencies:
+
+### Demo Mode Configuration
+To enable demo mode, run the backend in `Development` with the demo flag:
+- In `appsettings.Development.json`:
+  ```json
+  "DemoMode": {
+    "Enabled": true,
+    "SeedStaffAccounts": false
+  },
+  "Stripe": {
+    "AllowSimulatedCheckout": true,
+    "SecretKey": "sk_test_demo_51FutureWingsDemoSecretKey889201",
+    "PublishableKey": "pk_test_demo_51FutureWingsDemoPublishableKey889201"
+  }
+  ```
+- Or set environment variables:
+  ```powershell
+  $env:ASPNETCORE_ENVIRONMENT="Development"
+  $env:FUTUREWINGS_DEMO_MODE="true"
+  ```
+- **Production Guard**: Demo upgrades, simulated checkouts, and test keys are **strictly rejected** in `Production` environment with RFC 7807 `ProblemDetails` (HTTP 503 Service Unavailable).
+
+### Pre-seeded Demo Accounts
 - **Judge Student Account**:
   - **Email**: `demo@futurewings.io`
   - **Password**: `Password123!`
   - Pre-populated with active applications (TUM, U of T, Stanford, Oxford, ETH Zurich), verified deadlines, uploaded vault documents, and Pro subscription entitlements.
 - **Staff Demo Accounts** (Admin / Agent):
-  - In Development, set `FUTUREWINGS_SEED_STAFF=true` to seed `admin@futurewings.io` (`Password123!`) and `agent@futurewings.io` (`Password123!`).
-- **Simulated Checkout**:
-  - In demo mode, upgrading between Free, Pro, and Premium plans runs locally without external network calls. Simulation is strictly rejected in Production or when a live Stripe key is configured.
+  - In Development, set `FUTUREWINGS_SEED_STAFF=true` (or `DemoMode:SeedStaffAccounts=true`) to seed `admin@futurewings.io` (`Password123!`) and `agent@futurewings.io` (`Password123!`).
+
+### Evaluator Flow: Unlocking the Pro Plan (No Payment Required)
+1. Sign in or register with any Student account on the **Free** tier.
+2. Navigate to **Plans & Billing** in the left sidebar or at `#/plans`.
+3. Because Demo Mode is active and the account is not already Pro or Premium, a clearly labeled **Unlock Pro Demo** button appears in both the top Stripe Demo banner and the **Pro** plan card.
+4. Click **Unlock Pro Demo**:
+   - The frontend issues `POST /api/subscription/demo-pro` (or simulated checkout) without invoking Stripe, requiring card details, or making external calls.
+   - The backend validates demo-mode safety, grants the **Pro** tier, and unlocks Pro entitlements.
+   - A success toast `"Pro demo access enabled"` confirms the upgrade.
+5. **Entitlement Verification**:
+   - **Roadmap Unlocked**: Navigate to **Roadmap** (`#/roadmap`) — the interactive study roadmap mind map is fully accessible and unlocked.
+   - **AI Interview Locked**: Navigate to **AI Interview** (`#/ai-interview`) — the page remains strictly locked, rendering the `LockedFeature` screen indicating that **AI Interview is part of Premium** and requires a real Premium upgrade.
+6. **Idempotency Guarantee**: Clicking **Unlock Pro Demo** repeatedly is completely idempotent; it will never create duplicate payment records, multiple subscriptions, or conflicting entitlements.
+7. **Resetting Tier**: In Demo Mode, evaluators can click **Reset to Free Tier** at any time to return to the Free tier and re-test the upgrade flow.
 
 ---
 
@@ -89,9 +123,9 @@ cd ClientApp
 npm test -- --run
 ```
 
-### Test Coverage (96 Backend Tests + 4 Frontend Tests)
+### Test Coverage (144 Backend Tests + 31 Frontend Tests = 175 Total)
 - **Authentication Security**: Privilege escalation prevention (first user cannot become Admin), BCrypt password hashing & salt verification, token claim injection, role-based authorization.
-- **Stripe & Subscriptions**: Idempotent webhook processing (replayed Stripe events do not create duplicate payments or corrupt state), invalid return URL rejection, production simulation rejection, live key safety guards.
+- **Stripe & Subscriptions**: Demo-mode gating, Pro-only entitlement granting, production simulation rejection, idempotent webhook and demo unlock handling, invalid return URL rejection, live key safety guards.
 - **Document Security**: Binary magic byte signatures (`%PDF`, `\x89PNG`, `JPEG`, `DOC`, `DOCX`), MIME spoofing detection, 10 MB size enforcement, path traversal defense, and ownership isolation.
 - **Applications & Tracking**: Multi-status workflow (`Draft`, `Submitted`, `Under Review`, `Accepted`, `Withdrawn`), user isolation, deduplication constraints, deletion.
 - **Deadlines & Planner**: Task creation, category classification, completion toggles, removal.

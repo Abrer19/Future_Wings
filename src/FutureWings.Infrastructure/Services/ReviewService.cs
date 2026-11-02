@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using FutureWings.Application.DTOs.Review;
 using FutureWings.Application.Interfaces;
 using FutureWings.Domain.Entities;
@@ -8,6 +9,40 @@ namespace FutureWings.Infrastructure.Services;
 
 public class ReviewService(FutureWingsDbContext context) : IReviewService
 {
+    /// <summary>
+    /// Sanitizes review comments to plain text, stripping executable markup (<script>, <style>, <iframe`, etc.),
+    /// stripping HTML tags while preserving inner readable text, and normalizing line breaks.
+    /// </summary>
+    public static string? SanitizeComment(string? comment)
+    {
+        if (string.IsNullOrWhiteSpace(comment)) return null;
+
+        // 1. Strip dangerous blocks including their inner contents
+        var text = Regex.Replace(
+            comment,
+            @"<(script|style|iframe|svg|object)\b[^>]*>[\s\S]*?(<\/\1>|$)",
+            "",
+            RegexOptions.IgnoreCase);
+
+        // 2. Convert line break and paragraph tags to newlines
+        text = Regex.Replace(text, @"<br\s*\/?>", "\n", RegexOptions.IgnoreCase);
+        text = Regex.Replace(text, @"<\/(p|div)>", "\n", RegexOptions.IgnoreCase);
+
+        // 3. Strip all remaining HTML tags (e.g. <b>, </b>, <img>, etc.)
+        text = Regex.Replace(text, @"<[a-zA-Z/!?][^>]*>", "");
+
+        // 4. Decode common safe entities
+        text = text
+            .Replace("&amp;", "&")
+            .Replace("&quot;", "\"")
+            .Replace("&#39;", "'")
+            .Replace("&apos;", "'")
+            .Replace("&nbsp;", " ");
+
+        text = text.Trim();
+        return string.IsNullOrWhiteSpace(text) ? null : text;
+    }
+
     public async Task<ReviewDto> AddReviewAsync(int userId, ReviewCreateDto request)
     {
         if (!await context.Users.AnyAsync(user => user.Id == userId)) throw new KeyNotFoundException("User not found.");
@@ -20,13 +55,15 @@ public class ReviewService(FutureWingsDbContext context) : IReviewService
             UserId = userId,
             UniversityId = request.UniversityId,
             Score = request.Score,
-            Comment = string.IsNullOrWhiteSpace(request.Comment) ? null : request.Comment.Trim()
+            Comment = SanitizeComment(request.Comment)
         };
         context.Ratings.Add(rating);
         await context.SaveChangesAsync();
 
-        return await QueryReviews(request.UniversityId, userId)
+        var created = await QueryReviews(request.UniversityId, userId)
             .SingleAsync(review => review.Id == rating.Id);
+        created.Comment = SanitizeComment(created.Comment);
+        return created;
     }
 
     public async Task<IReadOnlyList<ReviewDto>> GetUniversityReviewsAsync(int universityId, int currentUserId)
@@ -34,10 +71,17 @@ public class ReviewService(FutureWingsDbContext context) : IReviewService
         if (!await context.Universities.AnyAsync(university => university.Id == universityId))
             throw new KeyNotFoundException("University not found.");
 
-        return await QueryReviews(universityId, currentUserId)
+        var reviews = await QueryReviews(universityId, currentUserId)
             .OrderByDescending(review => review.IsMine)
             .ThenByDescending(review => review.Id)
             .ToListAsync();
+
+        foreach (var review in reviews)
+        {
+            review.Comment = SanitizeComment(review.Comment);
+        }
+
+        return reviews;
     }
 
     private IQueryable<ReviewDto> QueryReviews(int universityId, int currentUserId) =>
@@ -61,4 +105,3 @@ public class ReviewService(FutureWingsDbContext context) : IReviewService
                 IsMine = r.UserId == currentUserId
             });
 }
-

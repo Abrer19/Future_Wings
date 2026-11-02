@@ -265,6 +265,16 @@ public static class DiscoverySeeder
 
     private static async Task SeedCommunityRatingsAsync(FutureWingsDbContext context)
     {
+        // Clean up any temporary or adversarial test payload reviews left from prior security tests
+        var dirtyRatings = await context.Ratings
+            .Where(r => r.Comment != null && (r.Comment.Contains("<script") || r.Comment.Contains("<img") || r.Comment.Contains("<iframe")))
+            .ToListAsync();
+        if (dirtyRatings.Count > 0)
+        {
+            context.Ratings.RemoveRange(dirtyRatings);
+            await context.SaveChangesAsync();
+        }
+
         // Check if demo user exists for ratings
         var demoUser = await context.Users.FirstOrDefaultAsync(u => u.Email == "demo.reviewer@futurewings.io");
         if (demoUser is null)
@@ -341,4 +351,3 @@ public static class DiscoverySeeder
         int MatchScore,
         string Tags);
 }
-
